@@ -1,0 +1,46 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.lottery.app",
+  "productName": "年会抽奖",
+  "copyright": "Copyright © 2024",
+  "directories": {
+    "output": "release",
+    "buildResources": "build"
+  },
+  "files": [
+    "dist/**/*",
+    "dist-electron/**/*"
+  ],
+  "extraResources": [
+    {
+      "from": "test",
+      "to": "test",
+      "filter": ["**/*"]
+    }
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "artifactName": "${productName}-${version}-Setup.${ext}"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowElevation": true,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "年会抽奖"
+  },
+  "mac": {
+    "target": ["dmg"],
+    "artifactName": "${productName}-${version}.${ext}"
+  },
+  "linux": {
+    "target": ["AppImage"],
+    "artifactName": "${productName}-${version}.${ext}"
+  }
+}
