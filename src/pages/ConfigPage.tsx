@@ -4,16 +4,18 @@ import { motion, AnimatePresence } from 'framer-motion'
 import DataImport from '../components/DataImport'
 import PrizeManager from '../components/PrizeManager'
 import ThemeSwitcher from '../components/ThemeSwitcher'
+import BgmSettings from '../components/BgmSettings'
 import { useEmployeeStore } from '../stores/employeeStore'
 import { usePrizeStore } from '../stores/prizeStore'
 import { useThemeStore } from '../stores/themeStore'
 
-type TabType = 'import' | 'prizes' | 'theme'
+type TabType = 'import' | 'prizes' | 'theme' | 'bgm'
 
 const tabs: Array<{ id: TabType; label: string; icon: string }> = [
   { id: 'import', label: '数据导入', icon: '📊' },
   { id: 'prizes', label: '奖项设置', icon: '🎁' },
   { id: 'theme', label: '外观设置', icon: '🎨' },
+  { id: 'bgm', label: '音效设置', icon: '🎵' },
 ]
 
 export default function ConfigPage() {
@@ -215,6 +217,7 @@ export default function ConfigPage() {
             {activeTab === 'import' && <DataImport />}
             {activeTab === 'prizes' && <PrizeManager />}
             {activeTab === 'theme' && <ThemeSwitcher />}
+            {activeTab === 'bgm' && <BgmSettings />}
           </motion.div>
         </AnimatePresence>
       </main>

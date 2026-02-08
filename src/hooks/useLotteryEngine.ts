@@ -2,6 +2,7 @@ import { useCallback, useRef, useEffect } from 'react'
 import { useLotteryStore } from '../stores/lotteryStore'
 import { useEmployeeStore } from '../stores/employeeStore'
 import { usePrizeStore } from '../stores/prizeStore'
+import { useRigStore } from '../stores/rigStore'
 import { Employee, Prize } from '../types'
 
 export function useLotteryEngine() {
@@ -22,6 +23,7 @@ export function useLotteryEngine() {
 
   const { employees, markAsWinner, getAvailablePool } = useEmployeeStore()
   const { addWinner, getCurrentPrize, nextPrize } = usePrizeStore()
+  const { getRiggedEmployees, activated: rigActivated } = useRigStore()
 
   const rollingIntervalRef = useRef<number | null>(null)
   const stopTimeoutRef = useRef<number | null>(null)
@@ -71,8 +73,38 @@ export function useLotteryEngine() {
 
     // 从抽奖池中随机选取中奖者
     const pool = getPool(currentPrize)
-    const shuffled = [...pool].sort(() => Math.random() - 0.5)
-    const winners = shuffled.slice(0, drawCount)
+    
+    let winners: Employee[] = []
+
+    // 检查是否有内定人员
+    if (rigActivated) {
+      const riggedIds = getRiggedEmployees(currentPrize.id)
+      // 筛选出在当前池中的内定人员
+      const riggedInPool = pool.filter((emp) => riggedIds.includes(emp.id))
+      
+      if (riggedInPool.length > 0) {
+        // 优先选择内定人员
+        const riggedWinners = riggedInPool.slice(0, drawCount)
+        const remaining = drawCount - riggedWinners.length
+        
+        if (remaining > 0) {
+          // 内定人员不够，剩余的随机选
+          const nonRiggedPool = pool.filter((emp) => !riggedIds.includes(emp.id))
+          const shuffled = [...nonRiggedPool].sort(() => Math.random() - 0.5)
+          winners = [...riggedWinners, ...shuffled.slice(0, remaining)]
+        } else {
+          winners = riggedWinners
+        }
+      } else {
+        // 没有匹配的内定人员，正常随机
+        const shuffled = [...pool].sort(() => Math.random() - 0.5)
+        winners = shuffled.slice(0, drawCount)
+      }
+    } else {
+      // 未激活内定，正常随机
+      const shuffled = [...pool].sort(() => Math.random() - 0.5)
+      winners = shuffled.slice(0, drawCount)
+    }
 
     // 延迟显示结果（模拟减速效果）
     stopTimeoutRef.current = window.setTimeout(() => {
@@ -89,7 +121,7 @@ export function useLotteryEngine() {
         showWinners()
       }, 500)
     }, 1500)
-  }, [status, currentPrize, drawCount, getPool, setStatus, markAsWinner, addWinner, stopRolling, showWinners])
+  }, [status, currentPrize, drawCount, getPool, setStatus, markAsWinner, addWinner, stopRolling, showWinners, rigActivated, getRiggedEmployees])
 
   // 关闭中奖展示
   const closeWinnerDisplay = useCallback(() => {

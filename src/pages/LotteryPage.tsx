@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import LotteryScene from '../components/LotteryScene'
@@ -7,8 +7,10 @@ import HistoryPanel from '../components/HistoryPanel'
 import { useEmployeeStore } from '../stores/employeeStore'
 import { usePrizeStore } from '../stores/prizeStore'
 import { useThemeStore } from '../stores/themeStore'
+import { useRigStore } from '../stores/rigStore'
 import { useLotteryEngine } from '../hooks/useLotteryEngine'
 import { useKeyboardControl } from '../hooks/useKeyboardControl'
+import { useBGM } from '../hooks/useBGM'
 import { Prize } from '../types'
 
 export default function LotteryPage() {
@@ -26,6 +28,15 @@ export default function LotteryPage() {
     start,
   } = useLotteryEngine()
 
+  // BGM 集成
+  useBGM(status)
+
+  // 内定功能
+  const { activated: rigActivated, setActivated: setRigActivated, addRig, removeRig, getRiggedEmployees } = useRigStore()
+  const [showRigPanel, setShowRigPanel] = useState(false)
+  const rigClickCountRef = useRef(0)
+  const rigClickTimerRef = useRef<number | null>(null)
+
   const [showHistory, setShowHistory] = useState(false)
   const [showPrizeSelector, setShowPrizeSelector] = useState(false)
   const [showAddPrize, setShowAddPrize] = useState(false)
@@ -34,6 +45,24 @@ export default function LotteryPage() {
   
   const isDark = theme.type !== 'minimal-light'
   const isChineseRed = theme.type === 'chinese-red'
+
+  // 隐蔽入口：快速点击可抽奖人数区域 5 次
+  const handleSecretClick = useCallback(() => {
+    rigClickCountRef.current += 1
+    
+    if (rigClickTimerRef.current) {
+      clearTimeout(rigClickTimerRef.current)
+    }
+    
+    if (rigClickCountRef.current >= 5) {
+      rigClickCountRef.current = 0
+      setShowRigPanel(true)
+    } else {
+      rigClickTimerRef.current = window.setTimeout(() => {
+        rigClickCountRef.current = 0
+      }, 2000)
+    }
+  }, [])
 
   // 当前选中的奖项
   const selectedPrize = prizes[currentPrizeIndex]
@@ -419,13 +448,16 @@ export default function LotteryPage() {
           </p>
         </div>
 
-        {/* 右侧：人数显示 */}
+        {/* 右侧：人数显示（隐蔽入口：快速点击 5 次打开内定面板） */}
         <div className="flex-1 flex justify-end">
-          <div className={`
-            px-6 py-3 rounded-xl
-            ${isDark ? 'bg-white/10 text-white' : 'bg-black/10 text-gray-800'}
-            backdrop-blur-sm text-center
-          `}>
+          <div 
+            onClick={handleSecretClick}
+            className={`
+              px-6 py-3 rounded-xl cursor-default select-none
+              ${isDark ? 'bg-white/10 text-white' : 'bg-black/10 text-gray-800'}
+              backdrop-blur-sm text-center
+            `}
+          >
             <div className="text-2xl font-bold">{availablePool.length}</div>
             <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               可抽奖人数
@@ -561,6 +593,184 @@ export default function LotteryPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* 内定面板（伪装为系统诊断工具） */}
+      <AnimatePresence>
+        {showRigPanel && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowRigPanel(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-2xl max-h-[80vh] bg-slate-900 rounded-2xl shadow-2xl mx-4 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* 标题栏 - 伪装 */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-400">⚙</span>
+                  <h3 className="text-white font-semibold">高级设置</h3>
+                </div>
+                <div className="flex items-center gap-3">
+                  {/* 激活开关 */}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <span className="text-xs text-gray-500">启用</span>
+                    <button
+                      onClick={() => setRigActivated(!rigActivated)}
+                      className={`
+                        relative w-10 h-5 rounded-full transition-colors duration-300
+                        ${rigActivated ? 'bg-green-500' : 'bg-white/20'}
+                      `}
+                    >
+                      <div
+                        className={`
+                          absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-md
+                          transition-transform duration-300
+                          ${rigActivated ? 'translate-x-5' : 'translate-x-0.5'}
+                        `}
+                      />
+                    </button>
+                  </label>
+                  <button
+                    onClick={() => setShowRigPanel(false)}
+                    className="text-gray-500 hover:text-white transition-colors text-lg"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 overflow-y-auto max-h-[calc(80vh-64px)]">
+                {/* 奖项选择 + 搜索员工 */}
+                {prizes.length > 0 && (
+                  <div className="space-y-4">
+                    {prizes.map((prize) => {
+                      const riggedIds = getRiggedEmployees(prize.id)
+                      const riggedEmps = employees.filter((e) => riggedIds.includes(e.id))
+                      
+                      return (
+                        <div key={prize.id} className="bg-white/5 rounded-xl p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-white font-medium">{prize.name}</span>
+                              <span className="text-xs text-gray-500">
+                                ({prize.winners.length}/{prize.count})
+                              </span>
+                            </div>
+                            {riggedIds.length > 0 && (
+                              <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded">
+                                已指定 {riggedIds.length} 人
+                              </span>
+                            )}
+                          </div>
+
+                          {/* 已内定人员 */}
+                          {riggedEmps.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {riggedEmps.map((emp) => (
+                                <span
+                                  key={emp.id}
+                                  className="inline-flex items-center gap-1 bg-green-500/10 text-green-400 text-xs px-2 py-1 rounded-lg"
+                                >
+                                  {emp.name} ({emp.id})
+                                  <button
+                                    onClick={() => removeRig(prize.id, emp.id)}
+                                    className="hover:text-red-400 ml-1"
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* 添加人员 */}
+                          {riggedIds.length < (prize.count - prize.winners.length) && (
+                            <RigEmployeeSearch
+                              prizeId={prize.id}
+                              employees={employees.filter(
+                                (e) => !e.isWinner && !riggedIds.includes(e.id)
+                              )}
+                              onAdd={(empId) => addRig(prize.id, empId)}
+                            />
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+// 内定人员搜索选择子组件
+function RigEmployeeSearch({
+  prizeId,
+  employees,
+  onAdd,
+}: {
+  prizeId: string
+  employees: Array<{ id: string; name: string; department: string }>
+  onAdd: (empId: string) => void
+}) {
+  const [search, setSearch] = useState('')
+  const [showDropdown, setShowDropdown] = useState(false)
+
+  const filtered = search.trim()
+    ? employees.filter(
+        (e) =>
+          e.name.includes(search) ||
+          e.id.includes(search) ||
+          e.department.includes(search)
+      ).slice(0, 8)
+    : []
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        value={search}
+        onChange={(e) => {
+          setSearch(e.target.value)
+          setShowDropdown(true)
+        }}
+        onFocus={() => setShowDropdown(true)}
+        placeholder="搜索姓名、工号或部门..."
+        className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder:text-gray-600 outline-none focus:border-indigo-500"
+      />
+      
+      {showDropdown && filtered.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 rounded-lg shadow-xl border border-white/10 max-h-48 overflow-y-auto z-10">
+          {filtered.map((emp) => (
+            <button
+              key={emp.id}
+              onClick={() => {
+                onAdd(emp.id)
+                setSearch('')
+                setShowDropdown(false)
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2 hover:bg-white/10 text-left"
+            >
+              <div>
+                <span className="text-white text-sm">{emp.name}</span>
+                <span className="text-gray-500 text-xs ml-2">{emp.id}</span>
+              </div>
+              <span className="text-gray-600 text-xs ml-auto">{emp.department}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

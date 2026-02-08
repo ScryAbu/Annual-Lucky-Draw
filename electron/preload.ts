@@ -25,6 +25,12 @@ const electronAPI = {
     data: string
   } | null> => ipcRenderer.invoke('select-image'),
   
+  // 选择音频文件
+  selectAudio: (): Promise<{
+    name: string
+    data: string
+  } | null> => ipcRenderer.invoke('select-audio'),
+  
   // 导出 Excel
   exportExcel: (data: ArrayBuffer, defaultName: string): Promise<boolean> =>
     ipcRenderer.invoke('export-excel', data, defaultName),

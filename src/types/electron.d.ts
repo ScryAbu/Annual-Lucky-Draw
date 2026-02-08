@@ -18,6 +18,11 @@ interface ElectronAPI {
     data: string
   } | null>
   
+  selectAudio: () => Promise<{
+    name: string
+    data: string
+  } | null>
+  
   exportExcel: (data: ArrayBuffer, defaultName: string) => Promise<boolean>
   
   toggleFullscreen: () => Promise<boolean>

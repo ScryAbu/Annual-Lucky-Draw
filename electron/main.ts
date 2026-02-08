@@ -197,6 +197,41 @@ ipcMain.handle('export-excel', async (_event, data: ArrayBuffer, defaultName: st
   }
 })
 
+// 选择音频文件
+ipcMain.handle('select-audio', async () => {
+  const result = await dialog.showOpenDialog(mainWindow!, {
+    title: '选择音频文件',
+    filters: [
+      { name: '音频文件', extensions: ['mp3', 'wav', 'ogg', 'aac', 'm4a', 'flac'] },
+    ],
+    properties: ['openFile'],
+  })
+  
+  if (result.canceled || result.filePaths.length === 0) {
+    return null
+  }
+  
+  const filePath = result.filePaths[0]
+  const buffer = await readFile(filePath)
+  const fileName = filePath.split(/[\\/]/).pop() || ''
+  const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase()
+  
+  const mimeMap: Record<string, string> = {
+    '.mp3': 'audio/mpeg',
+    '.wav': 'audio/wav',
+    '.ogg': 'audio/ogg',
+    '.aac': 'audio/aac',
+    '.m4a': 'audio/mp4',
+    '.flac': 'audio/flac',
+  }
+  const mimeType = mimeMap[ext] || 'audio/mpeg'
+  
+  return {
+    name: fileName,
+    data: `data:${mimeType};base64,${buffer.toString('base64')}`,
+  }
+})
+
 // 切换全屏
 ipcMain.handle('toggle-fullscreen', () => {
   if (mainWindow) {
