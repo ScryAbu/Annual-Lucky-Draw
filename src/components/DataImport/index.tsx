@@ -4,7 +4,7 @@ import { useEmployeeStore } from '../../stores/employeeStore'
 import { useThemeStore } from '../../stores/themeStore'
 import { parseExcelFile, getExcelHeaders, autoDetectFieldMapping, convertToEmployees } from '../../utils/excelParser'
 import { FieldMapping, DEFAULT_FIELD_MAPPING, Employee } from '../../types'
-import { v4 as uuidv4 } from 'uuid'
+// uuid available if needed
 import * as XLSX from 'xlsx'
 import ImageCropper from '../ImageCropper'
 
@@ -47,12 +47,6 @@ export default function DataImport() {
     if (isChineseRed) return 'bg-yellow-500 hover:bg-yellow-400 text-red-900'
     if (isDark) return 'bg-indigo-600 hover:bg-indigo-500 text-white'
     return 'bg-blue-600 hover:bg-blue-500 text-white'
-  }
-
-  const getHoverBorderClass = () => {
-    if (isChineseRed) return 'hover:border-yellow-500 hover:bg-yellow-500/10'
-    if (isDark) return 'hover:border-indigo-500 hover:bg-indigo-500/10'
-    return 'hover:border-blue-500 hover:bg-blue-50'
   }
 
   // 下载 Excel 模板

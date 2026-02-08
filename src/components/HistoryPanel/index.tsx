@@ -11,7 +11,7 @@ interface HistoryPanelProps {
 }
 
 export default function HistoryPanel({ isOpen, onToggle }: HistoryPanelProps) {
-  const { employees, getWinners } = useEmployeeStore()
+  const { getWinners } = useEmployeeStore()
   const { prizes, getPrizeById } = usePrizeStore()
   const { theme } = useThemeStore()
   

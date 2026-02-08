@@ -62,12 +62,6 @@ export default function ConfigPage() {
     }
   }
 
-  // 根据主题获取强调色
-  const getAccentClass = () => {
-    if (isChineseRed) return 'bg-gradient-to-r from-red-600 to-yellow-500'
-    if (isDark) return 'bg-gradient-to-r from-indigo-600 to-purple-600'
-    return 'bg-gradient-to-r from-blue-600 to-indigo-600'
-  }
 
   return (
     <div className={`min-h-screen overflow-auto ${getBackgroundClass()}`}>

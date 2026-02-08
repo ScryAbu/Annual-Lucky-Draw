@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { readFile, readdir } from 'fs/promises'
-import { existsSync, writeFileSync } from 'fs'
+import { writeFileSync } from 'fs'
 
 // 开发环境判断
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
@@ -37,7 +37,7 @@ function createWindow() {
     mainWindow.webContents.openDevTools()
   } else {
     // 调试模式：按 Ctrl+Shift+I 打开 DevTools
-    mainWindow.webContents.on('before-input-event', (event, input) => {
+    mainWindow.webContents.on('before-input-event', (_event, input) => {
       if (input.control && input.shift && input.key.toLowerCase() === 'i') {
         mainWindow?.webContents.openDevTools()
       }

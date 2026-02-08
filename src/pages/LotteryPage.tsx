@@ -11,7 +11,6 @@ import { useRigStore } from '../stores/rigStore'
 import { useLotteryEngine } from '../hooks/useLotteryEngine'
 import { useKeyboardControl } from '../hooks/useKeyboardControl'
 import { useBGM } from '../hooks/useBGM'
-import { Prize } from '../types'
 
 export default function LotteryPage() {
   const navigate = useNavigate()
@@ -25,7 +24,6 @@ export default function LotteryPage() {
     currentWinners,
     toggle,
     closeWinnerDisplay,
-    start,
   } = useLotteryEngine()
 
   // BGM 集成
@@ -716,7 +714,6 @@ export default function LotteryPage() {
 
 // 内定人员搜索选择子组件
 function RigEmployeeSearch({
-  prizeId,
   employees,
   onAdd,
 }: {

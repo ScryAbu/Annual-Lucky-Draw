@@ -1,6 +1,6 @@
 import { useRef, useMemo, useEffect, useState } from 'react'
-import { useFrame, useThree } from '@react-three/fiber'
-import { Text, useTexture } from '@react-three/drei'
+import { useFrame } from '@react-three/fiber'
+// drei utilities available if needed
 import * as THREE from 'three'
 import { Employee } from '../types'
 

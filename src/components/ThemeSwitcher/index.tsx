@@ -1,6 +1,5 @@
-import { useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { useThemeStore, THEME_PRESETS } from '../../stores/themeStore'
+import { useThemeStore } from '../../stores/themeStore'
 import { ThemeType } from '../../types'
 
 // 导入预设背景图
@@ -64,9 +63,6 @@ export default function ThemeSwitcher() {
   const isDark = theme.type !== 'minimal-light'
   const isChineseRed = theme.type === 'chinese-red'
   
-  // 获取当前选中的背景（用于检查是否是预设背景）
-  const isPresetBg = presetBackgrounds.some(bg => bg.src === theme.customBackground)
-
   // 选择自定义背景
   const handleSelectBackground = async () => {
     const result = await window.electronAPI.selectImage()

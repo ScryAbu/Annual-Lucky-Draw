@@ -13,7 +13,6 @@ export function useLotteryEngine() {
     drawCount,
     setStatus,
     setCurrentPrize,
-    setCurrentWinners,
     setRollingDisplays,
     startRolling,
     stopRolling,
@@ -21,8 +20,8 @@ export function useLotteryEngine() {
     reset,
   } = useLotteryStore()
 
-  const { employees, markAsWinner, getAvailablePool } = useEmployeeStore()
-  const { addWinner, getCurrentPrize, nextPrize } = usePrizeStore()
+  const { markAsWinner, getAvailablePool } = useEmployeeStore()
+  const { addWinner, getCurrentPrize } = usePrizeStore()
   const { getRiggedEmployees, activated: rigActivated } = useRigStore()
 
   const rollingIntervalRef = useRef<number | null>(null)

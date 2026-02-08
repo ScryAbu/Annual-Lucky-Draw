@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
+import { persist } from 'zustand/middleware'
 import { ThemeType, ThemeConfig, CustomAssets } from '../types'
 
 // 预设背景选项（中国红主题）
