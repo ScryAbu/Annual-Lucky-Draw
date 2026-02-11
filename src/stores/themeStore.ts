@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { ThemeType, ThemeConfig, CustomAssets } from '../types'
+import { ThemeType, ThemeConfig, CustomAssets, DisplayOptions } from '../types'
 
 // 预设背景选项（中国红主题）
 export const CHINESE_BACKGROUNDS = [
@@ -54,11 +54,13 @@ interface ThemeState {
   customAssets: CustomAssets
   eventTitle: string
   selectedBgId: string  // 预设背景ID
+  displayOptions: DisplayOptions  // 显示信息控制选项
   setTheme: (type: ThemeType) => void
   setCustomBackground: (base64: string | undefined) => void
   setLogoImage: (base64: string | undefined) => void
   setEventTitle: (title: string) => void
   setSelectedBgId: (id: string) => void
+  setDisplayOptions: (options: Partial<DisplayOptions>) => void
 }
 
 export const useThemeStore = create<ThemeState>()(
@@ -68,6 +70,11 @@ export const useThemeStore = create<ThemeState>()(
       customAssets: {},
       eventTitle: '年会抽奖',
       selectedBgId: 'newyear',
+      displayOptions: {
+        showId: true,
+        showDepartment: true,
+        showName: true,
+      },
 
       setTheme: (type) => {
         const currentCustomBg = get().theme.customBackground
@@ -103,6 +110,15 @@ export const useThemeStore = create<ThemeState>()(
 
       setSelectedBgId: (id) => {
         set({ selectedBgId: id })
+      },
+
+      setDisplayOptions: (options) => {
+        set((state) => ({
+          displayOptions: {
+            ...state.displayOptions,
+            ...options,
+          },
+        }))
       },
     }),
     {

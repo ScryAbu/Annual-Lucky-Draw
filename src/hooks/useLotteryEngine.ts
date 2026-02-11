@@ -48,15 +48,25 @@ export function useLotteryEngine() {
 
     startRolling(prize, count)
 
-    // 开始滚动效果
-    rollingIntervalRef.current = window.setInterval(() => {
+    // 开始滚动效果 - 优化为更流畅的动画
+    let frameCount = 0
+    const rollSpeed = 50 // 滚动速度，越小越快
+    
+    const rollFunction = () => {
       // 随机选取展示
       const shuffled = [...pool].sort(() => Math.random() - 0.5)
       setRollingDisplays(shuffled.slice(0, Math.min(count, 5)))
-    }, 100)
+      
+      frameCount++
+      if (status === 'rolling') {
+        rollingIntervalRef.current = window.setTimeout(rollFunction, rollSpeed) as unknown as number
+      }
+    }
+    
+    rollFunction()
 
     return true
-  }, [getPool, startRolling, setRollingDisplays])
+  }, [getPool, startRolling, setRollingDisplays, status])
 
   // 停止抽奖
   const stop = useCallback(() => {
@@ -64,7 +74,7 @@ export function useLotteryEngine() {
 
     // 清除滚动定时器
     if (rollingIntervalRef.current) {
-      clearInterval(rollingIntervalRef.current)
+      clearTimeout(rollingIntervalRef.current)
       rollingIntervalRef.current = null
     }
 
@@ -148,7 +158,7 @@ export function useLotteryEngine() {
   useEffect(() => {
     return () => {
       if (rollingIntervalRef.current) {
-        clearInterval(rollingIntervalRef.current)
+        clearTimeout(rollingIntervalRef.current)
       }
       if (stopTimeoutRef.current) {
         clearTimeout(stopTimeoutRef.current)

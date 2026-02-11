@@ -64,7 +64,7 @@ export const convertToEmployees = (
   mapping: FieldMapping
 ): Employee[] => {
   return data
-    .filter((row) => row[mapping.id] && row[mapping.name]) // 过滤无效行
+    .filter((row) => row[mapping.name]) // 过滤无效行，只要求有姓名
     .map((row) => ({
       id: String(row[mapping.id] || ''),
       name: String(row[mapping.name] || ''),

@@ -26,6 +26,13 @@ export interface Prize {
 // 主题类型
 export type ThemeType = 'tech-dark' | 'minimal-light' | 'chinese-red'
 
+// 显示信息控制选项
+export interface DisplayOptions {
+  showId: boolean    // 是否显示工号
+  showDepartment: boolean  // 是否显示部门
+  showName: boolean  // 是否显示姓名
+}
+
 // 主题配置
 export interface ThemeConfig {
   type: ThemeType

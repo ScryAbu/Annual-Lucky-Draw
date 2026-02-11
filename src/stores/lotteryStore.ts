@@ -63,7 +63,7 @@ export const useLotteryStore = create<LotteryState>((set) => ({
       currentPrize: null,
       currentWinners: [],
       rollingDisplays: [],
-      drawCount: 1,
+      // 不再重置drawCount，保持用户设置的值
     })
   },
 }))

@@ -72,7 +72,7 @@ export default function LotteryPage() {
     : 0
   
   // 最大可抽人数（取剩余人数和可用池的较小值）
-  const maxDrawCount = Math.min(remainingCount, availablePool.length, 10) // 最多一次抽10人
+  const maxDrawCount = Math.min(remainingCount, availablePool.length)
 
   // 获取背景样式
   const backgroundStyle = useMemo(() => {
@@ -373,46 +373,32 @@ export default function LotteryPage() {
               <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
                 本次抽取
               </span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setDrawCount(Math.max(1, drawCount - 1))}
-                  disabled={drawCount <= 1}
-                  className={`
-                    w-8 h-8 rounded-lg font-bold text-lg
-                    ${drawCount <= 1 
-                      ? 'opacity-30 cursor-not-allowed' 
-                      : isChineseRed
-                        ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
-                        : 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
-                    }
-                  `}
-                >
-                  -
-                </button>
-                <span className={`
-                  w-12 text-center text-xl font-bold
-                  ${isChineseRed ? 'text-yellow-400' : isDark ? 'text-white' : 'text-gray-800'}
-                `}>
-                  {drawCount}
-                </span>
-                <button
-                  onClick={() => setDrawCount(Math.min(maxDrawCount, drawCount + 1))}
-                  disabled={drawCount >= maxDrawCount}
-                  className={`
-                    w-8 h-8 rounded-lg font-bold text-lg
-                    ${drawCount >= maxDrawCount 
-                      ? 'opacity-30 cursor-not-allowed' 
-                      : isChineseRed
-                        ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
-                        : 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
-                    }
-                  `}
-                >
-                  +
-                </button>
-              </div>
+              <input
+                type="number"
+                min="1"
+                max={maxDrawCount}
+                value={drawCount}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 1
+                  setDrawCount(Math.min(Math.max(1, value), maxDrawCount))
+                }}
+                className={`
+                  w-20 px-3 py-2 rounded-lg text-center text-xl font-bold
+                  ${isChineseRed 
+                    ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30' 
+                    : isDark 
+                      ? 'bg-white/10 text-white border border-white/20' 
+                      : 'bg-white text-gray-800 border border-gray-300'
+                  }
+                  focus:outline-none focus:ring-2
+                  ${isChineseRed 
+                    ? 'focus:ring-yellow-500' 
+                    : 'focus:ring-indigo-500'
+                  }
+                `}
+              />
               <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                人
+                人 (最多{maxDrawCount}人)
               </span>
             </div>
           )}

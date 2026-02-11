@@ -59,7 +59,7 @@ const themes: Array<{
 ]
 
 export default function ThemeSwitcher() {
-  const { theme, setTheme, setCustomBackground, setLogoImage, customAssets, eventTitle, setEventTitle } = useThemeStore()
+  const { theme, setTheme, setCustomBackground, setLogoImage, customAssets, eventTitle, setEventTitle, displayOptions, setDisplayOptions } = useThemeStore()
   const isDark = theme.type !== 'minimal-light'
   const isChineseRed = theme.type === 'chinese-red'
   
@@ -364,6 +364,85 @@ export default function ThemeSwitcher() {
             </button>
           )}
         </div>
+      </div>
+
+      {/* 显示信息控制 */}
+      <div className={`rounded-xl p-6 relative z-10 ${
+        isChineseRed 
+          ? 'bg-gradient-to-br from-red-900/80 to-red-800/80 border-2 border-yellow-500/30' 
+          : isDark ? 'bg-white/5' : 'bg-gray-100'
+      }`}>
+        <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}>
+          抽奖页面显示信息
+        </h3>
+        
+        <div className="space-y-4">
+          <label className={`flex items-center gap-3 cursor-pointer ${
+            isDark ? 'text-white' : 'text-gray-800'
+          }`}>
+            <input
+              type="checkbox"
+              checked={displayOptions.showName}
+              onChange={(e) => setDisplayOptions({ showName: e.target.checked })}
+              className={`
+                w-5 h-5 rounded
+                ${isChineseRed 
+                  ? 'accent-yellow-500' 
+                  : isDark 
+                    ? 'accent-indigo-500' 
+                    : 'accent-blue-500'
+                }
+              `}
+            />
+            <span>显示姓名</span>
+          </label>
+          
+          <label className={`flex items-center gap-3 cursor-pointer ${
+            isDark ? 'text-white' : 'text-gray-800'
+          }`}>
+            <input
+              type="checkbox"
+              checked={displayOptions.showId}
+              onChange={(e) => setDisplayOptions({ showId: e.target.checked })}
+              className={`
+                w-5 h-5 rounded
+                ${isChineseRed 
+                  ? 'accent-yellow-500' 
+                  : isDark 
+                    ? 'accent-indigo-500' 
+                    : 'accent-blue-500'
+                }
+              `}
+            />
+            <span>显示工号</span>
+          </label>
+          
+          <label className={`flex items-center gap-3 cursor-pointer ${
+            isDark ? 'text-white' : 'text-gray-800'
+          }`}>
+            <input
+              type="checkbox"
+              checked={displayOptions.showDepartment}
+              onChange={(e) => setDisplayOptions({ showDepartment: e.target.checked })}
+              className={`
+                w-5 h-5 rounded
+                ${isChineseRed 
+                  ? 'accent-yellow-500' 
+                  : isDark 
+                    ? 'accent-indigo-500' 
+                    : 'accent-blue-500'
+                }
+              `}
+            />
+            <span>显示部门</span>
+          </label>
+        </div>
+        
+        <p className={`text-xs mt-3 ${
+          isDark ? 'text-gray-500' : 'text-gray-400'
+        }`}>
+          控制抽奖页面中奖者信息的显示内容，默认全部显示
+        </p>
       </div>
 
       {/* 预览效果 */}
