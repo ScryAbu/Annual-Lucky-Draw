@@ -8,6 +8,7 @@ export interface Employee {
   isWinner: boolean    // 是否已中奖
   prizeId?: string     // 中奖奖项ID
   winTime?: number     // 中奖时间戳
+  points?: number      // 积分（用于终极大奖权重，默认为 0）
 }
 
 // 奖项类型
@@ -77,6 +78,7 @@ export interface FieldMapping {
   name: string       // 姓名字段名
   department: string // 部门字段名
   photoFile: string  // 照片文件名字段名
+  points?: string    // 积分的 Excel 列名（可选）
 }
 
 // IPC 通道名称

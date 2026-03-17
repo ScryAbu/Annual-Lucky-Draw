@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { usePrizeStore } from '../../stores/prizeStore'
 import { useThemeStore } from '../../stores/themeStore'
 import { Prize } from '../../types'
+import * as XLSX from 'xlsx'
 
 interface PrizeFormData {
   name: string
@@ -21,7 +22,7 @@ const defaultFormData: PrizeFormData = {
 }
 
 export default function PrizeManager() {
-  const { prizes, addPrize, updatePrize, deletePrize, resetAllPrizes } = usePrizeStore()
+  const { prizes, addPrize, updatePrize, deletePrize, resetAllPrizes, batchImportPrizes } = usePrizeStore()
   const { theme } = useThemeStore()
   
   const [showForm, setShowForm] = useState(false)
@@ -85,6 +86,72 @@ export default function PrizeManager() {
     setFormData(defaultFormData)
   }, [formData, editingId, addPrize, updatePrize])
 
+  const parseBooleanCell = (value: unknown) => {
+    if (typeof value === 'boolean') return value
+    if (typeof value === 'number') return value > 0
+    const normalized = String(value ?? '').trim().toLowerCase()
+    return ['是', 'true', '1', 'yes', 'y', '包含', '含已中奖'].includes(normalized)
+  }
+
+  const parsePrizeRows = (buffer: ArrayBuffer): PrizeFormData[] => {
+    const workbook = XLSX.read(buffer, { type: 'array' })
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, { defval: '' })
+
+    return rows
+      .map((row) => {
+        const name = String(
+          row['奖项'] ||
+          row['奖项名称'] ||
+          row['名称'] ||
+          row['name'] ||
+          ''
+        ).trim()
+        const countValue = Number(
+          row['数量'] ||
+          row['名额'] ||
+          row['中奖人数'] ||
+          row['count'] ||
+          1
+        )
+        const count = Number.isFinite(countValue) && countValue > 0 ? Math.floor(countValue) : 1
+
+        return {
+          name,
+          count,
+          isTemporary: parseBooleanCell(row['临时奖项'] || row['是否临时'] || row['isTemporary']),
+          includeWinners: parseBooleanCell(row['包含已中奖'] || row['返场抽奖'] || row['includeWinners']),
+          prizeImage: undefined,
+          prizeImageName: undefined,
+        }
+      })
+      .filter((item) => Boolean(item.name))
+  }
+
+  const handleImportPrizes = useCallback(async (mode: 'append' | 'replace') => {
+    const result = await window.electronAPI.selectExcel()
+    if (!result) return
+
+    try {
+      const parsed = parsePrizeRows(result.buffer)
+      if (parsed.length === 0) {
+        alert('未识别到有效奖项，请确认 Excel 至少包含「奖项名称/奖项」列。')
+        return
+      }
+
+      if (mode === 'replace' && prizes.length > 0) {
+        const ok = confirm(`将覆盖当前 ${prizes.length} 个奖项并导入 ${parsed.length} 个新奖项，确定继续吗？`)
+        if (!ok) return
+      }
+
+      batchImportPrizes(parsed, mode)
+      alert(`已${mode === 'replace' ? '覆盖' : '追加'}导入 ${parsed.length} 个奖项。`)
+    } catch (error) {
+      console.error('Failed to import prizes:', error)
+      alert('奖项导入失败，请检查 Excel 格式是否正确。')
+    }
+  }, [batchImportPrizes, prizes.length])
+
   // 删除奖项
   const handleDelete = useCallback((id: string) => {
     if (confirm('确定要删除这个奖项吗？')) {
@@ -112,6 +179,30 @@ export default function PrizeManager() {
             奖项列表
           </h3>
           <div className="flex gap-2">
+            <button
+              onClick={() => handleImportPrizes('append')}
+              className={`
+                px-4 py-2 rounded-lg text-sm font-medium transition-all
+                ${isDark
+                  ? 'bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30'
+                  : 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200'
+                }
+              `}
+            >
+              ⬆️ 导入奖项（追加）
+            </button>
+            <button
+              onClick={() => handleImportPrizes('replace')}
+              className={`
+                px-4 py-2 rounded-lg text-sm font-medium transition-all
+                ${isDark
+                  ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
+                  : 'bg-red-100 text-red-700 hover:bg-red-200'
+                }
+              `}
+            >
+              🧹 导入奖项（覆盖）
+            </button>
             {prizes.length > 0 && (
               <button
                 onClick={handleResetAll}
@@ -141,7 +232,7 @@ export default function PrizeManager() {
             <p>暂无奖项，请添加</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
             {prizes.map((prize, index) => (
               <motion.div
                 key={prize.id}
@@ -245,6 +336,9 @@ export default function PrizeManager() {
             ))}
           </div>
         )}
+        <p className={`text-xs mt-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+          导入表头示例：奖项名称、数量、包含已中奖(可选)、临时奖项(可选)
+        </p>
       </div>
 
       {/* 新增/编辑表单弹窗 */}

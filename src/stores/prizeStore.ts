@@ -13,6 +13,7 @@ interface PrizeState {
   updatePrize: (id: string, data: Partial<Prize>) => void
   deletePrize: (id: string) => void
   addWinner: (prizeId: string, employeeId: string) => void
+  batchImportPrizes: (prizeList: Array<Omit<Prize, 'id' | 'winners' | 'order'>>, mode?: 'append' | 'replace') => void
   reorderPrizes: (startIndex: number, endIndex: number) => void
   setCurrentPrizeIndex: (index: number) => void
   nextPrize: () => void
@@ -26,6 +27,7 @@ interface PrizeState {
   getPrizeById: (id: string) => Prize | undefined
   getCompletedPrizes: () => Prize[]
   getPendingPrizes: () => Prize[]
+  getAvailablePrizes: () => Prize[]  // 获取还有剩余名额的奖品
 }
 
 export const usePrizeStore = create<PrizeState>((set, get) => ({
@@ -71,6 +73,29 @@ export const usePrizeStore = create<PrizeState>((set, get) => ({
           : prize
       ),
     }))
+    get().saveToDB()
+  },
+
+  batchImportPrizes: (prizeList, mode = 'append') => {
+    if (prizeList.length === 0) return
+
+    set((state) => {
+      const basePrizes = mode === 'replace' ? [] : state.prizes
+      const startOrder = basePrizes.length
+      const importedPrizes: Prize[] = prizeList.map((prizeData, index) => ({
+        ...prizeData,
+        id: uuidv4(),
+        winners: [],
+        order: startOrder + index,
+      }))
+
+      const nextPrizes = [...basePrizes, ...importedPrizes]
+      return {
+        prizes: nextPrizes,
+        currentPrizeIndex: Math.min(state.currentPrizeIndex, Math.max(nextPrizes.length - 1, 0)),
+      }
+    })
+
     get().saveToDB()
   },
 
@@ -150,6 +175,11 @@ export const usePrizeStore = create<PrizeState>((set, get) => ({
   },
 
   getPendingPrizes: () => {
+    const { prizes } = get()
+    return prizes.filter((prize) => prize.winners.length < prize.count)
+  },
+
+  getAvailablePrizes: () => {
     const { prizes } = get()
     return prizes.filter((prize) => prize.winners.length < prize.count)
   },

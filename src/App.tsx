@@ -2,6 +2,8 @@ import { HashRouter, Routes, Route } from 'react-router-dom'
 import { useEffect } from 'react'
 import ConfigPage from './pages/ConfigPage'
 import LotteryPage from './pages/LotteryPage'
+import PrizeWheelPage from './pages/PrizeWheelPage'
+import UltimatePrizePage from './pages/UltimatePrizePage'
 import { useThemeStore } from './stores/themeStore'
 import { useEmployeeStore } from './stores/employeeStore'
 import { usePrizeStore } from './stores/prizeStore'
@@ -37,6 +39,8 @@ function App() {
         <Routes>
           <Route path="/" element={<ConfigPage />} />
           <Route path="/lottery" element={<LotteryPage />} />
+          <Route path="/prize-wheel" element={<PrizeWheelPage />} />
+          <Route path="/ultimate" element={<UltimatePrizePage />} />
         </Routes>
       </HashRouter>
     </div>

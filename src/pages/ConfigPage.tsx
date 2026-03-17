@@ -41,6 +41,25 @@ export default function ConfigPage() {
     }
   }
 
+  // 进入轮盘抽奖页面
+  const handleStartWheel = () => {
+    if (canStart) {
+      navigate('/prize-wheel')
+    }
+  }
+
+  // 终极大奖：需有奖品且至少有一人积分 > 0
+  const canStartUltimate = prizes.length > 0 && employees.some((e) => (e.points ?? 0) > 0)
+  const handleStartUltimate = () => {
+    if (canStartUltimate) {
+      navigate('/ultimate')
+    } else if (prizes.length === 0) {
+      alert('请先添加至少一个奖项作为终极大奖')
+    } else {
+      alert('请先在「数据导入」→ 员工数据管理中为员工设置积分（积分 > 0 方可参与终极大奖）')
+    }
+  }
+
   // 清除所有抽奖记录
   const handleResetLottery = useCallback(() => {
     if (confirm('确定要清除所有抽奖记录吗？\n\n这将重置所有中奖者状态，但不会删除员工和奖项数据。')) {
@@ -131,26 +150,68 @@ export default function ConfigPage() {
               </motion.button>
             )}
 
-            {/* 开始按钮 */}
-            <motion.button
-              whileHover={{ scale: canStart ? 1.05 : 1 }}
-              whileTap={{ scale: canStart ? 0.95 : 1 }}
-              onClick={handleStart}
-              disabled={!canStart}
-              className={`
-                px-6 py-2 rounded-xl font-semibold transition-all
-                ${canStart
-                  ? isChineseRed
-                    ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-red-900 shadow-lg shadow-yellow-500/30'
-                    : isDark
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
-                      : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30'
-                  : 'bg-gray-500/30 text-gray-500 cursor-not-allowed'
-                }
-              `}
-            >
-              进入抽奖 →
-            </motion.button>
+            {/* 开始按钮组 */}
+            <div className="flex items-center gap-3">
+              <motion.button
+                whileHover={{ scale: canStart ? 1.05 : 1 }}
+                whileTap={{ scale: canStart ? 0.95 : 1 }}
+                onClick={handleStart}
+                disabled={!canStart}
+                className={`
+                  px-6 py-2 rounded-xl font-semibold transition-all
+                  ${canStart
+                    ? isChineseRed
+                      ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-red-900 shadow-lg shadow-yellow-500/30'
+                      : isDark
+                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
+                        : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30'
+                    : 'bg-gray-500/30 text-gray-500 cursor-not-allowed'
+                  }
+                `}
+              >
+                进入抽奖 →
+              </motion.button>
+              
+              <motion.button
+                whileHover={{ scale: canStart ? 1.05 : 1 }}
+                whileTap={{ scale: canStart ? 0.95 : 1 }}
+                onClick={handleStartWheel}
+                disabled={!canStart}
+                className={`
+                  px-6 py-2 rounded-xl font-semibold transition-all
+                  ${canStart
+                    ? isChineseRed
+                      ? 'bg-gradient-to-r from-orange-500 to-red-600 text-yellow-100 shadow-lg shadow-orange-500/30'
+                      : isDark
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/30'
+                        : 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-lg shadow-pink-500/30'
+                    : 'bg-gray-500/30 text-gray-500 cursor-not-allowed'
+                  }
+                `}
+              >
+                🎡 轮盘抽奖
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: canStartUltimate ? 1.05 : 1 }}
+                whileTap={{ scale: canStartUltimate ? 0.95 : 1 }}
+                onClick={handleStartUltimate}
+                disabled={!canStartUltimate}
+                className={`
+                  px-6 py-2 rounded-xl font-semibold transition-all
+                  ${canStartUltimate
+                    ? isChineseRed
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-yellow-100 shadow-lg shadow-amber-500/30'
+                      : isDark
+                        ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg shadow-amber-500/30'
+                        : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30'
+                    : 'bg-gray-500/30 text-gray-500 cursor-not-allowed'
+                  }
+                `}
+              >
+                🏆 终极大奖
+              </motion.button>
+            </div>
           </div>
         </div>
       </header>

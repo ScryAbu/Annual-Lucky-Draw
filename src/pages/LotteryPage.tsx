@@ -16,7 +16,7 @@ export default function LotteryPage() {
   const navigate = useNavigate()
   const { employees, getAvailablePool } = useEmployeeStore()
   const { prizes, currentPrizeIndex, setCurrentPrizeIndex } = usePrizeStore()
-  const { theme, customAssets, eventTitle } = useThemeStore()
+  const { theme, customAssets, eventTitle, showWinnerAvatar } = useThemeStore()
   
   const {
     status,
@@ -72,7 +72,7 @@ export default function LotteryPage() {
     : 0
   
   // 最大可抽人数（取剩余人数和可用池的较小值）
-  const maxDrawCount = Math.min(remainingCount, availablePool.length)
+  const maxDrawCount = Math.min(remainingCount, availablePool.length, 30) // 最多一次抽30人
 
   // 获取背景样式
   const backgroundStyle = useMemo(() => {
@@ -309,39 +309,41 @@ export default function LotteryPage() {
                   rounded-xl shadow-2xl overflow-hidden
                 `}
               >
-                {prizes.map((prize, index) => {
-                  const completed = prize.winners.length >= prize.count
-                  return (
-                    <button
-                      key={prize.id}
-                      onClick={() => {
-                        setCurrentPrizeIndex(index)
-                        setShowPrizeSelector(false)
-                      }}
-                      className={`
-                        w-full flex items-center gap-3 px-4 py-3
-                        ${index === currentPrizeIndex 
-                          ? isDark ? 'bg-indigo-600' : 'bg-blue-500 text-white'
-                          : isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'
-                        }
-                        ${completed ? 'opacity-50' : ''}
-                      `}
-                    >
-                      {prize.prizeImage ? (
-                        <img src={prize.prizeImage} alt="" className="w-8 h-8 object-contain" />
-                      ) : (
-                        <span className="text-2xl">🎁</span>
-                      )}
-                      <div className="flex-1 text-left">
-                        <div className={isDark ? 'text-white' : 'text-gray-800'}>{prize.name}</div>
-                        <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {prize.winners.length} / {prize.count}
-                          {completed && ' ✓'}
+                <div className="max-h-[60vh] overflow-y-auto">
+                  {prizes.map((prize, index) => {
+                    const completed = prize.winners.length >= prize.count
+                    return (
+                      <button
+                        key={prize.id}
+                        onClick={() => {
+                          setCurrentPrizeIndex(index)
+                          setShowPrizeSelector(false)
+                        }}
+                        className={`
+                          w-full flex items-center gap-3 px-4 py-3
+                          ${index === currentPrizeIndex 
+                            ? isDark ? 'bg-indigo-600' : 'bg-blue-500 text-white'
+                            : isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'
+                          }
+                          ${completed ? 'opacity-50' : ''}
+                        `}
+                      >
+                        {prize.prizeImage ? (
+                          <img src={prize.prizeImage} alt="" className="w-8 h-8 object-contain" />
+                        ) : (
+                          <span className="text-2xl">🎁</span>
+                        )}
+                        <div className="flex-1 text-left">
+                          <div className={isDark ? 'text-white' : 'text-gray-800'}>{prize.name}</div>
+                          <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                            {prize.winners.length} / {prize.count}
+                            {completed && ' ✓'}
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  )
-                })}
+                      </button>
+                    )
+                  })}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -373,32 +375,46 @@ export default function LotteryPage() {
               <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
                 本次抽取
               </span>
-              <input
-                type="number"
-                min="1"
-                max={maxDrawCount}
-                value={drawCount}
-                onChange={(e) => {
-                  const value = parseInt(e.target.value) || 1
-                  setDrawCount(Math.min(Math.max(1, value), maxDrawCount))
-                }}
-                className={`
-                  w-20 px-3 py-2 rounded-lg text-center text-xl font-bold
-                  ${isChineseRed 
-                    ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30' 
-                    : isDark 
-                      ? 'bg-white/10 text-white border border-white/20' 
-                      : 'bg-white text-gray-800 border border-gray-300'
-                  }
-                  focus:outline-none focus:ring-2
-                  ${isChineseRed 
-                    ? 'focus:ring-yellow-500' 
-                    : 'focus:ring-indigo-500'
-                  }
-                `}
-              />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setDrawCount(Math.max(1, drawCount - 1))}
+                  disabled={drawCount <= 1}
+                  className={`
+                    w-8 h-8 rounded-lg font-bold text-lg
+                    ${drawCount <= 1 
+                      ? 'opacity-30 cursor-not-allowed' 
+                      : isChineseRed
+                        ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
+                        : 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
+                    }
+                  `}
+                >
+                  -
+                </button>
+                <span className={`
+                  w-12 text-center text-xl font-bold
+                  ${isChineseRed ? 'text-yellow-400' : isDark ? 'text-white' : 'text-gray-800'}
+                `}>
+                  {drawCount}
+                </span>
+                <button
+                  onClick={() => setDrawCount(Math.min(maxDrawCount, drawCount + 1))}
+                  disabled={drawCount >= maxDrawCount}
+                  className={`
+                    w-8 h-8 rounded-lg font-bold text-lg
+                    ${drawCount >= maxDrawCount 
+                      ? 'opacity-30 cursor-not-allowed' 
+                      : isChineseRed
+                        ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
+                        : 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
+                    }
+                  `}
+                >
+                  +
+                </button>
+              </div>
               <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                人 (最多{maxDrawCount}人)
+                人
               </span>
             </div>
           )}
@@ -458,6 +474,7 @@ export default function LotteryPage() {
         onClose={closeWinnerDisplay}
         themeType={theme.type}
         primaryColor={theme.colors.primary}
+        showAvatar={showWinnerAvatar}
       />
 
       {/* 历史记录面板 */}

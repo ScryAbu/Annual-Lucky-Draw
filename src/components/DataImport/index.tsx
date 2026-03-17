@@ -17,6 +17,37 @@ interface ImportStats {
   isMerge?: boolean
 }
 
+const normalizeKeyPart = (value: string, fallback: string) => {
+  const normalized = value
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/[^\w\u4e00-\u9fa5-]/g, '')
+  return normalized || fallback
+}
+
+const ensureEmployeeIds = (list: Employee[]): Employee[] => {
+  const used = new Set<string>()
+  return list.map((emp, index) => {
+    const rawId = emp.id.trim()
+    if (rawId && !used.has(rawId)) {
+      used.add(rawId)
+      return { ...emp, id: rawId }
+    }
+
+    const baseId = `AUTO_${normalizeKeyPart(emp.name, 'EMP')}_${normalizeKeyPart(emp.department, 'DEPT')}`
+    let generatedId = baseId
+    let suffix = 1
+
+    while (used.has(generatedId)) {
+      suffix++
+      generatedId = `${baseId}_${suffix}`
+    }
+
+    used.add(generatedId)
+    return { ...emp, id: generatedId || `AUTO_EMP_${index + 1}` }
+  })
+}
+
 export default function DataImport() {
   const { employees, setEmployees, addEmployee, updateEmployee, clearAll } = useEmployeeStore()
   const { theme } = useThemeStore()
@@ -33,7 +64,7 @@ export default function DataImport() {
   // 员工管理相关状态
   const [showEmployeeForm, setShowEmployeeForm] = useState(false)
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
-  const [employeeForm, setEmployeeForm] = useState({ id: '', name: '', department: '', photoFile: '', photoData: '' })
+  const [employeeForm, setEmployeeForm] = useState({ id: '', name: '', department: '', photoFile: '', photoData: '', points: 0 })
   
   // 图片裁剪相关状态
   const [showCropper, setShowCropper] = useState(false)
@@ -64,7 +95,7 @@ export default function DataImport() {
     XLSX.utils.sheet_add_aoa(worksheet, [
       [''],
       ['【使用说明】'],
-      ['1. 工号和姓名为必填项'],
+      ['1. 姓名为必填项；工号可留空，系统会自动生成唯一工号'],
       ['2. 照片文件名需与照片文件夹中的文件名一致（支持 jpg/png 格式）'],
       ['3. 如不填照片文件名，系统会尝试用工号或姓名匹配照片'],
       ['4. 导入时请先选择照片所在的文件夹'],
@@ -96,6 +127,7 @@ export default function DataImport() {
       '姓名': emp.name,
       '部门': emp.department,
       '照片文件名': emp.photoFile || '',
+      '积分': typeof emp.points === 'number' ? emp.points : 0,
       '是否中奖': emp.isWinner ? '是' : '否',
       '中奖奖项ID': emp.prizeId || '',
     }))
@@ -162,7 +194,7 @@ export default function DataImport() {
 
   // 处理导入数据（通用函数）
   const processImportData = useCallback(() => {
-    const employeeList = convertToEmployees(excelData, fieldMapping)
+    const employeeList = ensureEmployeeIds(convertToEmployees(excelData, fieldMapping))
     
     let withPhoto = 0
     let withoutPhoto = 0
@@ -218,17 +250,20 @@ export default function DataImport() {
     employeesWithPhotos.forEach((newEmp) => {
       const existing = existingMap.get(newEmp.id)
       if (existing) {
-        // 更新现有员工（保留中奖状态和照片）
+        // 更新现有员工（保留中奖状态和照片，合并积分）
         existingMap.set(newEmp.id, {
           ...existing,
           name: newEmp.name,
           department: newEmp.department,
           photoFile: newEmp.photoFile,
-          photoData: newEmp.photoData || existing.photoData, // 保留旧照片如果新的没有
+          photoData: newEmp.photoData || existing.photoData,
+          points: (() => {
+            const incoming = (newEmp as Employee).points
+            return (typeof incoming === 'number' && incoming > 0) ? incoming : (existing.points ?? incoming ?? 0)
+          })(),
         })
         updated++
       } else {
-        // 新增
         existingMap.set(newEmp.id, newEmp)
         added++
       }
@@ -253,7 +288,7 @@ export default function DataImport() {
   // 打开添加员工表单
   const handleAddEmployee = useCallback(() => {
     setEditingEmployee(null)
-    setEmployeeForm({ id: '', name: '', department: '', photoFile: '', photoData: '' })
+    setEmployeeForm({ id: '', name: '', department: '', photoFile: '', photoData: '', points: 0 })
     setShowEmployeeForm(true)
   }, [])
 
@@ -266,6 +301,7 @@ export default function DataImport() {
       department: emp.department,
       photoFile: emp.photoFile,
       photoData: emp.photoData || '',
+      points: typeof emp.points === 'number' ? emp.points : 0,
     })
     setShowEmployeeForm(true)
   }, [])
@@ -299,6 +335,7 @@ export default function DataImport() {
       isWinner: editingEmployee?.isWinner || false,
       prizeId: editingEmployee?.prizeId,
       photoData: employeeForm.photoData || editingEmployee?.photoData,
+      points: Math.max(0, Number(employeeForm.points) || 0),
     }
 
     if (editingEmployee) {
@@ -634,6 +671,7 @@ export default function DataImport() {
                   <th className="px-3 py-2 text-left">工号</th>
                   <th className="px-3 py-2 text-left">姓名</th>
                   <th className="px-3 py-2 text-left">部门</th>
+                  <th className="px-3 py-2 text-center">积分</th>
                   <th className="px-3 py-2 text-center">状态</th>
                   <th className="px-3 py-2 text-center">操作</th>
                 </tr>
@@ -657,6 +695,7 @@ export default function DataImport() {
                     <td className="px-3 py-2">{emp.id}</td>
                     <td className="px-3 py-2">{emp.name}</td>
                     <td className="px-3 py-2">{emp.department}</td>
+                    <td className="px-3 py-2 text-center">{typeof emp.points === 'number' ? emp.points : 0}</td>
                     <td className="px-3 py-2 text-center">
                       {emp.isWinner ? (
                         <span className="text-yellow-500">🏆</span>
@@ -756,6 +795,26 @@ export default function DataImport() {
                       }
                     `}
                   />
+                </div>
+
+                <div>
+                  <label className={`block text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>积分（终极大奖权重）</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={employeeForm.points}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, points: Math.max(0, parseInt(e.target.value, 10) || 0) })}
+                    className={`
+                      w-full px-4 py-3 rounded-xl outline-none transition-colors
+                      ${isChineseRed
+                        ? 'bg-red-800/50 text-white border border-yellow-500/30 focus:border-yellow-500'
+                        : isDark
+                          ? 'bg-white/10 text-white border border-white/10 focus:border-indigo-500'
+                          : 'bg-gray-100 text-gray-800 border border-gray-200 focus:border-blue-500'
+                      }
+                    `}
+                  />
+                  <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>积分越高，抽中终极大奖的概率越大</p>
                 </div>
 
                 <div>
