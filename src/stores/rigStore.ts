@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 /**
- * 指定中奖设置；保留旧存储键以迁移历史设置，当前状态在大屏公开显示。
+ * 高级设置存储；保留旧存储键以兼容历史设置。
  */
 
 interface RigEntry {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import LotteryScene from '../components/LotteryScene'
@@ -18,7 +18,7 @@ export default function LotteryPage() {
   const navigate = useNavigate()
   const { employees } = useEmployeeStore()
   const { prizes, currentPrizeIndex, setCurrentPrizeIndex } = usePrizeStore()
-  const { theme, customAssets, eventTitle, drawMode } = useThemeStore()
+  const { theme, customAssets, eventTitle, drawMode, setDrawMode } = useThemeStore()
   
   const {
     status,
@@ -35,6 +35,35 @@ export default function LotteryPage() {
   // 内定功能
   const { activated: rigActivated, setActivated: setRigActivated, addRig, removeRig, getRiggedEmployees } = useRigStore()
   const [showRigPanel, setShowRigPanel] = useState(false)
+  const rigClickCountRef = useRef(0)
+  const rigClickTimerRef = useRef<number | null>(null)
+
+  // 隐蔽入口：空闲时快速点击可抽奖人数区域 5 次
+  const handleSecretClick = useCallback(() => {
+    if (status !== 'idle') return
+    rigClickCountRef.current += 1
+    if (rigClickTimerRef.current) {
+      clearTimeout(rigClickTimerRef.current)
+    }
+    if (rigClickCountRef.current >= 5) {
+      rigClickCountRef.current = 0
+      setShowRigPanel(true)
+    } else {
+      rigClickTimerRef.current = window.setTimeout(() => {
+        rigClickCountRef.current = 0
+      }, 2000)
+    }
+  }, [status])
+
+  useEffect(() => {
+    if (status !== 'idle') setShowRigPanel(false)
+  }, [status])
+
+  useEffect(() => {
+    return () => {
+      if (rigClickTimerRef.current) clearTimeout(rigClickTimerRef.current)
+    }
+  }, [])
   const [showHistory, setShowHistory] = useState(false)
   const [showPrizeSelector, setShowPrizeSelector] = useState(false)
   const [showAddPrize, setShowAddPrize] = useState(false)
@@ -231,7 +260,6 @@ export default function LotteryPage() {
             + 临时加奖
           </motion.button>
 
-          <button disabled={status !== 'idle'} className="px-3 py-2 rounded-xl bg-white/10" onClick={() => setShowRigPanel(true)}>指定中奖设置</button>
           <PresentationControls />
           {/* 全屏按钮 */}
           <motion.button
@@ -258,10 +286,11 @@ export default function LotteryPage() {
         />
       </div>
 
-      <div className="absolute top-24 left-6 text-sm bg-black/50 text-white rounded-lg p-3 pointer-events-none">
-        {rigActivated ? '指定中奖模式' : drawMode === 'weighted' ? '按人员权重抽奖' : '等概率抽奖'}
-        {availablePool.length > SCENE_PAGE_SIZE && <p>全部 {availablePool.length} 人按名单顺序分批展示，每 8 秒换页；所有人均参与抽奖</p>}
-      </div>
+      {availablePool.length > SCENE_PAGE_SIZE && (
+        <div className="absolute top-24 left-6 text-sm bg-black/50 text-white rounded-lg p-3 pointer-events-none">
+          <p>全部 {availablePool.length} 人按名单顺序分批展示，每 8 秒换页；所有人均参与抽奖</p>
+        </div>
+      )}
       {/* 底部控制栏 */}
       <footer className={`
         absolute bottom-0 left-0 right-0 z-20
@@ -437,9 +466,10 @@ export default function LotteryPage() {
           </p>
         </div>
 
-        {/* 右侧：人数显示 */}
+        {/* 右侧：人数显示（隐蔽入口：快速点击 5 次打开高级设置面板） */}
         <div className="flex-1 flex justify-end">
           <div 
+            onClick={handleSecretClick}
             className={`
               px-6 py-3 rounded-xl cursor-default select-none
               ${isDark ? 'bg-white/10 text-white' : 'bg-black/10 text-gray-800'}
@@ -583,33 +613,26 @@ export default function LotteryPage() {
         )}
       </AnimatePresence>
 
-      {/* 指定中奖面板 */}
-      <AnimatePresence>
-        {showRigPanel && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm"
-            onClick={() => setShowRigPanel(false)}
+      {/* 高级设置面板 */}
+      {showRigPanel && status === 'idle' && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={() => setShowRigPanel(false)}
+        >
+          <div
+            className="w-full max-w-2xl max-h-[80vh] bg-slate-900 rounded-2xl shadow-2xl mx-4 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-2xl max-h-[80vh] bg-slate-900 rounded-2xl shadow-2xl mx-4 overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* 标题栏 */}
+              {/* 标题栏 - 伪装 */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
                 <div className="flex items-center gap-2">
                   <span className="text-gray-400">⚙</span>
-                  <h3 className="text-white font-semibold">指定中奖设置（演示或定向赠奖）</h3>
+                  <h3 className="text-white font-semibold">高级设置</h3>
                 </div>
                 <div className="flex items-center gap-3">
                   {/* 激活开关 */}
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <span className="text-xs text-gray-500">启用</span>
+                    <span className="text-xs text-gray-500">启用定向分配</span>
                     <button
                       onClick={() => setRigActivated(!rigActivated)}
                       className={`
@@ -635,7 +658,23 @@ export default function LotteryPage() {
                 </div>
               </div>
 
-              <div className="p-6 overflow-y-auto max-h-[calc(80vh-64px)]">
+              <div className="p-6 overflow-y-auto max-h-[calc(80vh-64px)] space-y-4">
+                {/* 抽奖概率调节 */}
+                <div className="bg-white/5 rounded-xl p-4 flex items-center justify-between">
+                  <div>
+                    <div className="text-white font-medium text-sm">抽奖采样模式</div>
+                    <div className="text-xs text-gray-500 mt-0.5">开启权重抽取后，按名单管理中的系数分配中奖概率</div>
+                  </div>
+                  <select
+                    className="bg-slate-800 text-white text-sm rounded-lg px-3 py-1.5 border border-white/10 outline-none"
+                    value={drawMode}
+                    onChange={(e) => setDrawMode(e.target.value as 'fair' | 'weighted')}
+                  >
+                    <option value="fair">标准均匀</option>
+                    <option value="weighted">系数加权</option>
+                  </select>
+                </div>
+
                 {/* 奖项选择 + 搜索员工 */}
                 {prizes.length > 0 && (
                   <div className="space-y-4">
@@ -681,10 +720,10 @@ export default function LotteryPage() {
 
                           {/* 添加人员 */}
                           {riggedIds.length < (prize.count - prize.winners.length) && (
-                            <RigEmployeeSearch
+                              <RigEmployeeSearch
                               prizeId={prize.id}
-                              employees={employees.filter(
-                                (e) => !e.isWinner && !riggedIds.includes(e.id)
+                              employees={eligibleEmployees(employees, prize).filter(
+                                (e) => !riggedIds.includes(e.id)
                               )}
                               onAdd={(empId) => addRig(prize.id, empId)}
                             />
@@ -694,11 +733,10 @@ export default function LotteryPage() {
                     })}
                   </div>
                 )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

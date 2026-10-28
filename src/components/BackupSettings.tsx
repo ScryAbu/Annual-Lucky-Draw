@@ -7,8 +7,8 @@ export default function BackupSettings() {
   const input = useRef<HTMLInputElement>(null)
   return <section className="rounded-xl p-6 bg-black/10 space-y-4">
     <h3 className="text-lg font-semibold">保存与迁移活动</h3>
-    <p>导出一个配置文件，包含名单、照片、奖项、中奖记录、外观、权重和音乐。在另一台电脑导入即可继续使用。</p>
-    <p className="text-sm">文件包含人员信息及指定中奖设置，请妥善保管。导入会覆盖当前活动，建议先导出备份。</p>
+    <p>导出一个配置文件，包含名单、照片、奖项、中奖记录、外观和音乐。在另一台电脑导入即可继续使用。</p>
+    <p className="text-sm">文件包含完整活动数据与高级设置，请妥善保管。导入会覆盖当前活动，建议先导出备份。</p>
     <div className="flex gap-4">
       <button disabled={busy} className="px-4 py-2 rounded bg-indigo-600 text-white" onClick={async () => {
         setBusy(true)
@@ -29,7 +29,7 @@ export default function BackupSettings() {
       try {
         if (file.size > 100 * 1024 * 1024) throw new Error('配置文件不能超过 100 MB')
         const data = backupSchema.parse(JSON.parse(await file.text()))
-        if (!confirm(`导入 ${data.employees.length} 人、${data.prizes.length} 个奖项，覆盖当前活动？${data.rig.activated ? ' 文件启用了指定中奖模式。' : ''}`)) return
+        if (!confirm(`导入 ${data.employees.length} 人、${data.prizes.length} 个奖项，覆盖当前活动？`)) return
         await restoreBackup(data)
         location.reload()
       } catch (error) { setMessage(`导入失败，未替换活动数据：${String(error)}`) }

@@ -67,7 +67,7 @@ export default function ThemeSwitcher() {
     customAssets,
     eventTitle,
     setEventTitle,
-    displayOptions, setDisplayOptions, rotationSpeed, setRotationSpeed, drawMode, setDrawMode,
+    displayOptions, setDisplayOptions, rotationSpeed, setRotationSpeed,
   } = useThemeStore()
   const isDark = theme.type !== 'minimal-light'
   const isChineseRed = theme.type === 'chinese-red'
@@ -344,12 +344,6 @@ export default function ThemeSwitcher() {
         <label className="block mt-6">旋转速度：{rotationSpeed.toFixed(1)} 弧度/秒
           <input className="block w-full mt-2" type="range" min="0.5" max="6" step="0.1" value={rotationSpeed} onChange={e => setRotationSpeed(Number(e.target.value))} />
         </label>
-        <label className="block mt-6">常规抽奖概率
-          <select className="ml-3 bg-slate-800 text-white rounded p-2" value={drawMode} onChange={e => setDrawMode(e.target.value as 'fair' | 'weighted')}>
-            <option value="fair">等概率（默认）</option><option value="weighted">按人员权重</option>
-          </select>
-        </label>
-        <p className="text-sm mt-2">人员管理中可设置 1–100 倍权重。权重模式在大屏明确标注；首抽概率为个人权重 ÷ 总权重，批量抽取不重复。</p>
       </div>
 
       {/* 公司 Logo */}

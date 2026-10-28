@@ -639,7 +639,6 @@ export default function DataImport() {
                 <tr>
                   <th className="px-3 py-2 text-left">照片</th>
                   <th className="px-3 py-2 text-left">工号</th>
-                  <th>权重</th>
                   <th className="px-3 py-2 text-left">姓名</th>
                   <th className="px-3 py-2 text-left">部门</th>
                   <th className="px-3 py-2 text-center">积分</th>
@@ -664,7 +663,6 @@ export default function DataImport() {
                       )}
                     </td>
                     <td className="px-3 py-2">{emp.id}</td>
-                    <td>{emp.weight ?? 1}</td>
                     <td className="px-3 py-2">{emp.name}</td>
                     <td className="px-3 py-2">{emp.department}</td>
                     <td className="px-3 py-2 text-center">{typeof emp.points === 'number' ? emp.points : 0}</td>
@@ -769,9 +767,25 @@ export default function DataImport() {
                   />
                 </div>
 
-                <label className="block">常规抽奖权重（1–100）
-                  <input className="w-full p-2 rounded bg-slate-700 text-white" type="number" min="1" max="100" value={employeeForm.weight} onChange={e => setEmployeeForm({ ...employeeForm, weight: Number(e.target.value) })} />
-                </label>
+                <div>
+                  <label className={`block text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>优先级系数（1–100，默认 1）</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={employeeForm.weight}
+                    onChange={e => setEmployeeForm({ ...employeeForm, weight: Number(e.target.value) })}
+                    className={`
+                      w-full px-4 py-3 rounded-xl outline-none transition-colors
+                      ${isChineseRed
+                        ? 'bg-red-800/50 text-white border border-yellow-500/30 focus:border-yellow-500'
+                        : isDark
+                          ? 'bg-white/10 text-white border border-white/10 focus:border-indigo-500'
+                          : 'bg-gray-100 text-gray-800 border border-gray-200 focus:border-blue-500'
+                      }
+                    `}
+                  />
+                </div>
                 <div>
                   <label className={`block text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>积分（终极大奖权重）</label>
                   <input

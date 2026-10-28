@@ -35,7 +35,7 @@ export const backupSchema = z.object({
   if (ids.size !== data.employees.length || prizes.size !== data.prizes.length) ctx.addIssue({ code: 'custom', message: '重复人员或奖项编号' })
   if (data.prizes.some(p => p.winners.length > p.count || new Set(p.winners).size !== p.winners.length || p.winners.some(id => !ids.has(id)))) ctx.addIssue({ code: 'custom', message: '中奖记录引用无效' })
   if (data.employees.some(e => e.prizeId && !prizes.has(e.prizeId))) ctx.addIssue({ code: 'custom', message: '人员引用的奖项不存在' })
-  if (data.rig.rigList.some(r => !ids.has(r.employeeId) || !prizes.has(r.prizeId))) ctx.addIssue({ code: 'custom', message: '指定中奖设置引用无效' })
+  if (data.rig.rigList.some(r => !ids.has(r.employeeId) || !prizes.has(r.prizeId))) ctx.addIssue({ code: 'custom', message: '高级设置引用无效' })
 })
 
 async function embedImage(value?: string) {
