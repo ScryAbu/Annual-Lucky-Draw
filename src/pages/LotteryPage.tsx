@@ -18,7 +18,18 @@ export default function LotteryPage() {
   const navigate = useNavigate()
   const { employees } = useEmployeeStore()
   const { prizes, currentPrizeIndex, setCurrentPrizeIndex } = usePrizeStore()
-  const { theme, customAssets, eventTitle, drawMode, setDrawMode } = useThemeStore()
+  const {
+    theme,
+    customAssets,
+    eventTitle,
+    drawMode,
+    setDrawMode,
+    sceneEffect,
+    setSceneEffect,
+    sphereScale,
+    setSphereScale,
+  } = useThemeStore()
+  const [showSceneMenu, setShowSceneMenu] = useState(false)
   
   const {
     status,
@@ -56,7 +67,10 @@ export default function LotteryPage() {
   }, [status])
 
   useEffect(() => {
-    if (status !== 'idle') setShowRigPanel(false)
+    if (status !== 'idle') {
+      setShowRigPanel(false)
+      setShowSceneMenu(false)
+    }
   }, [status])
 
   useEffect(() => {
@@ -131,7 +145,7 @@ export default function LotteryPage() {
       }
     },
     onF11: toggleFullscreen,
-    enabled: !showPrizeSelector && !showAddPrize && !showRigPanel && !showHistory,
+    enabled: !showPrizeSelector && !showAddPrize && !showRigPanel && !showHistory && !showSceneMenu,
   })
 
   // 开始/停止抽奖
@@ -244,6 +258,86 @@ export default function LotteryPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* 3D 动效与尺寸快捷调节 */}
+          <div className="relative">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowSceneMenu(!showSceneMenu)}
+              className={`
+                px-3.5 py-2 rounded-xl font-medium text-sm flex items-center gap-1.5
+                ${isDark
+                  ? 'bg-white/10 text-white hover:bg-white/20'
+                  : 'bg-black/10 text-gray-800 hover:bg-black/20'
+                }
+              `}
+            >
+              <span>{sceneEffect === 'sphere' ? '🌐' : sceneEffect === 'helix' ? '🪐' : sceneEffect === 'starfield' ? '🌌' : '💻'}</span>
+              <span>动效与尺寸</span>
+            </motion.button>
+            {showSceneMenu && (
+              <div
+                className={`absolute right-0 mt-2 w-64 p-3 rounded-2xl shadow-2xl border z-30 ${
+                  isDark ? 'bg-slate-900/95 border-white/15 text-white' : 'bg-white/95 border-gray-200 text-gray-800'
+                } backdrop-blur-md`}
+              >
+                <div className="text-xs font-semibold mb-2 opacity-75">抽奖 3D 动效形式</div>
+                <div className="grid grid-cols-2 gap-1.5 mb-3">
+                  {([
+                    ['sphere', '🌐 经典球体'],
+                    ['helix', '🪐 螺旋星环'],
+                    ['starfield', '🌌 全屏漫游'],
+                    ['matrix', '💻 矩阵数据雨'],
+                  ] as const).map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => setSceneEffect(key)}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-medium text-left transition-all ${
+                        sceneEffect === key
+                          ? isChineseRed
+                            ? 'bg-yellow-500 text-red-950 font-bold'
+                            : 'bg-indigo-600 text-white'
+                          : isDark
+                            ? 'bg-white/5 hover:bg-white/15'
+                            : 'bg-gray-100 hover:bg-gray-200'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div className="text-xs font-semibold mb-1.5 opacity-75 flex justify-between">
+                  <span>画面尺寸缩放</span>
+                  <span>{Math.round(sphereScale * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.7"
+                  max="2.0"
+                  step="0.05"
+                  value={sphereScale}
+                  onChange={e => setSphereScale(Number(e.target.value))}
+                  className="w-full accent-indigo-500 mb-2"
+                />
+                <div className="flex justify-between gap-1">
+                  {([['紧凑', 0.85], ['标准', 1.15], ['大屏', 1.4], ['巨幕', 1.75]] as const).map(([label, val]) => (
+                    <button
+                      key={label}
+                      onClick={() => setSphereScale(val)}
+                      className={`flex-1 py-1 rounded text-[11px] ${
+                        Math.abs(sphereScale - val) < 0.06
+                          ? isChineseRed ? 'bg-yellow-500/30 text-yellow-300 font-semibold' : 'bg-indigo-500/30 text-indigo-300 font-semibold'
+                          : isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-gray-100 hover:bg-gray-200'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* 临时加奖按钮 */}
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -276,8 +370,8 @@ export default function LotteryPage() {
         </div>
       </header>
 
-      {/* 3D 抽奖场景 */}
-      <div className="absolute inset-x-0 top-20 bottom-56 z-0">
+      {/* 3D 抽奖场景（铺满全屏，视野开阔不局促） */}
+      <div className="absolute inset-0 z-0">
         <LotteryScene
           employees={status === 'idle' ? availablePool : activeEmployees}
           isRolling={status === 'rolling'}

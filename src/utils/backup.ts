@@ -23,7 +23,10 @@ export const backupSchema = z.object({
     themeType: z.enum(['tech-dark', 'minimal-light', 'chinese-red']), background: image, logo: image,
     eventTitle: z.string().max(30),
     displayOptions: z.object({ showPhoto: z.boolean(), showId: z.boolean(), showName: z.boolean(), showDepartment: z.boolean() }),
-    rotationSpeed: z.number().finite().min(0.5).max(6), drawMode: z.enum(['fair', 'weighted']),
+    rotationSpeed: z.number().finite().min(0.5).max(6),
+    sphereScale: z.number().finite().min(0.7).max(2.0).optional(),
+    sceneEffect: z.enum(['sphere', 'helix', 'starfield', 'matrix']).optional(),
+    drawMode: z.enum(['fair', 'weighted']),
   }),
   bgm: z.object({
     idleBgm: audio, rollingBgm: audio, winnerBgm: audio, bgmEnabled: z.boolean(),
@@ -55,7 +58,8 @@ export async function createBackup() {
   const data = await db.transaction('r', db.employees, db.prizes, async () => ({ employees: await db.employees.toArray(), prizes: await db.prizes.toArray() }))
   return backupSchema.parse({ format: 'annual-lucky-draw', version: 2, ...data,
     settings: { themeType: t.theme.type, background: await embedImage(t.theme.customBackground), logo: t.customAssets.logoImage,
-      eventTitle: t.eventTitle, displayOptions: t.displayOptions, rotationSpeed: t.rotationSpeed, drawMode: t.drawMode },
+      eventTitle: t.eventTitle, displayOptions: t.displayOptions, rotationSpeed: t.rotationSpeed,
+      sphereScale: t.sphereScale, sceneEffect: t.sceneEffect, drawMode: t.drawMode },
     bgm: b, rig: r,
   })
 }
@@ -66,7 +70,7 @@ export async function restoreBackup(input: unknown) {
   const settings = {
     theme: { ...THEME_PRESETS[s.themeType], customBackground: s.background }, customAssets: { logoImage: s.logo },
     eventTitle: s.eventTitle, displayOptions: s.displayOptions, showWinnerAvatar: s.displayOptions.showPhoto,
-    rotationSpeed: s.rotationSpeed, drawMode: s.drawMode,
+    rotationSpeed: s.rotationSpeed, sphereScale: s.sphereScale ?? 1.15, sceneEffect: s.sceneEffect ?? 'sphere', drawMode: s.drawMode,
   }
   const entries: [string, unknown][] = [['lottery-theme', settings], ['lottery-bgm', data.bgm], ['sys-render-cache-v3', data.rig]]
   const previous = entries.map(([key]) => [key, localStorage.getItem(key)] as const)

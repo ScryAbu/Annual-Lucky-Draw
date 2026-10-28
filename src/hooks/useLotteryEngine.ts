@@ -12,8 +12,15 @@ export function useLotteryEngine() {
   const state = useLotteryStore()
   const [activeEmployees, setActiveEmployees] = useState<Employee[]>([])
   const round = useRef<{ pool: Employee[]; prize: Prize; count: number; weighted: boolean; rigged: string[] } | null>(null)
-  const timer = useRef<number>()
+  const stopDelayTimer = useRef<number>()
+  const showDelayTimer = useRef<number>()
   const mounted = useRef(true)
+
+  const clearTimers = useCallback(() => {
+    window.clearTimeout(stopDelayTimer.current)
+    window.clearTimeout(showDelayTimer.current)
+  }, [])
+
   const start = useCallback((prize: Prize, count = 1) => {
     if (useLotteryStore.getState().status !== 'idle') return false
     const current = usePrizeStore.getState().getPrizeById(prize.id)
@@ -22,17 +29,19 @@ export function useLotteryEngine() {
     if (!Number.isInteger(count) || count < 1 || count > Math.min(pool.length, current.count - current.winners.length, 30)) {
       alert('抽取人数必须为 1–30，且不能超过剩余名额或可抽人数'); return false
     }
+    clearTimers()
     const rig = useRigStore.getState()
     round.current = { pool, prize: current, count, weighted: useThemeStore.getState().drawMode === 'weighted', rigged: rig.activated ? rig.getRiggedEmployees(current.id) : [] }
     setActiveEmployees(pool)
     useLotteryStore.getState().startRolling(current, count)
     return true
-  }, [])
+  }, [clearTimers])
+
   const stop = useCallback(async () => {
     const store = useLotteryStore.getState()
     if (store.status !== 'rolling' || !round.current) return
     const { pool, prize, count, weighted, rigged } = round.current
-    store.setStatus('stopping') // Synchronous lock: repeated clicks cannot draw twice.
+    store.setStatus('stopping') // Synchronous lock: repeated clicks cannot draw twice; scene begins smooth deceleration without spoiling winners.
     const preset = pool.filter(e => rigged.includes(e.id)).slice(0, count)
     const others = pool.filter(e => !preset.some(p => p.id === e.id))
     const winners = [...preset, ...(count > preset.length ? drawEmployees(others, count - preset.length, weighted) : [])]
@@ -40,28 +49,38 @@ export function useLotteryEngine() {
       // Persist both tables atomically before revealing this exact result.
       await commitWinners(prize.id, winners)
       if (!mounted.current) return
-      store.stopRolling(winners)
-      timer.current = window.setTimeout(() => useLotteryStore.getState().showWinners(), 1500)
+      // Reveal winners only after deceleration completes so '抽取中...' never leaks the result early.
+      stopDelayTimer.current = window.setTimeout(() => {
+        if (!mounted.current) return
+        useLotteryStore.getState().stopRolling(winners)
+        showDelayTimer.current = window.setTimeout(() => {
+          if (mounted.current) useLotteryStore.getState().showWinners()
+        }, 450)
+      }, 1100)
     } catch (error) {
-      if (mounted.current) { store.reset(); alert(`结果未保存，请重试：${String(error)}`) }
+      if (mounted.current) { clearTimers(); store.reset(); alert(`结果未保存，请重试：${String(error)}`) }
     }
-  }, [])
+  }, [clearTimers])
+
   const closeWinnerDisplay = useCallback(() => {
     if (useLotteryStore.getState().status !== 'showing') return
-    window.clearTimeout(timer.current)
+    clearTimers()
     round.current = null
     useLotteryStore.getState().reset()
     setActiveEmployees([])
-  }, [])
+  }, [clearTimers])
+
   const toggle = useCallback((prize?: Prize, count = 1) => {
     const status = useLotteryStore.getState().status
     if (status === 'idle') { const target = prize || usePrizeStore.getState().getCurrentPrize(); if (target) start(target, count) }
     else if (status === 'rolling') void stop()
     else if (status === 'showing') closeWinnerDisplay()
   }, [start, stop, closeWinnerDisplay])
+
   useEffect(() => {
     mounted.current = true
-    return () => { mounted.current = false; window.clearTimeout(timer.current); useLotteryStore.getState().reset() }
-  }, [])
+    return () => { mounted.current = false; clearTimers(); useLotteryStore.getState().reset() }
+  }, [clearTimers])
+
   return { ...state, activeEmployees, start, stop, toggle, closeWinnerDisplay }
 }
