@@ -11,4 +11,5 @@
 - 浏览器回归见 tests/browser-smoke.mjs，TEST_PROFILE 必须是登记过的隔离目录，不得使用个人浏览器配置。
 - macOS 安装包在 macOS 构建；CI 产物未经签名/公证，不等同于已经过实机安装验收。
 - 构建产物在 release/，不提交安装包、个人名单、照片、活动配置或本地浏览器资料。
-- 上游同步豁免：README.en.md、release-notes-v1.2.1.md、release-notes-v1.2.2.md 保留现有上游说明；新增技术文档只放 docs/。
+- 媒体审查记录见 docs/security-media-review.json；仅按已目视核验的路径与 blob 哈希限定，不豁免新图片。
+- 上游文档豁免：README.en.md、release-notes-v1.2.1.md、release-notes-v1.2.2.md 保留现有上游说明；新增技术文档只放 docs/。
