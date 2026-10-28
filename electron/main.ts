@@ -1,9 +1,11 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, screen } from 'electron'
 import { join } from 'path'
 import { readFile, readdir } from 'fs/promises'
 import { writeFileSync } from 'fs'
 
 // 开发环境判断
+const smokeTest = process.argv.includes('--smoke-test')
+
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
 let mainWindow: BrowserWindow | null = null
@@ -19,7 +21,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       // 允许 file:// 协议加载 ES modules（本地桌面应用安全）
-      webSecurity: isDev,
+      webSecurity: true,
     },
     frame: true,
     show: false,
@@ -28,7 +30,7 @@ function createWindow() {
 
   // 窗口准备好后显示
   mainWindow.once('ready-to-show', () => {
-    mainWindow?.show()
+    if (!smokeTest) mainWindow?.show()
   })
 
   // 加载页面
@@ -94,7 +96,7 @@ ipcMain.handle('select-excel', async () => {
   return {
     path: filePath,
     name: filePath.split(/[\\/]/).pop(),
-    buffer: buffer.buffer,
+    buffer: buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength),
   }
 })
 
@@ -244,4 +246,21 @@ ipcMain.handle('toggle-fullscreen', () => {
 // 获取全屏状态
 ipcMain.handle('is-fullscreen', () => {
   return mainWindow?.isFullScreen() || false
+})
+
+// Use the existing window: presentation and operator cannot diverge into two draw engines.
+ipcMain.handle('list-displays', () => screen.getAllDisplays().map((display, index) => ({
+  id: display.id,
+  label: `${display.label || `显示器 ${index + 1}`} (${display.size.width}×${display.size.height})${display.id === screen.getPrimaryDisplay().id ? ' · 主屏' : ''}`,
+})))
+ipcMain.handle('present-on-display', async (_event, id: number) => {
+  const display = screen.getAllDisplays().find(item => item.id === id)
+  const win = mainWindow
+  if (!display || !win) throw new Error('显示器不可用')
+  if (win.isFullScreen()) {
+    await new Promise<void>(resolve => { win.once('leave-full-screen', () => resolve()); win.setFullScreen(false) })
+  }
+  win.setBounds(display.bounds)
+  win.setFullScreen(true)
+  win.focus()
 })

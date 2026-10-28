@@ -1,171 +1,67 @@
-import { useCallback, useRef, useEffect } from 'react'
+import { useCallback, useRef, useEffect, useState } from 'react'
 import { useLotteryStore } from '../stores/lotteryStore'
 import { useEmployeeStore } from '../stores/employeeStore'
 import { usePrizeStore } from '../stores/prizeStore'
 import { useRigStore } from '../stores/rigStore'
+import { useThemeStore } from '../stores/themeStore'
 import { Employee, Prize } from '../types'
+import { drawEmployees, eligibleEmployees } from '../utils/draw'
+import { commitWinners } from '../utils/commitWinners'
 
 export function useLotteryEngine() {
-  const {
-    status,
-    currentPrize,
-    currentWinners,
-    drawCount,
-    setStatus,
-    setCurrentPrize,
-    setRollingDisplays,
-    startRolling,
-    stopRolling,
-    showWinners,
-    reset,
-  } = useLotteryStore()
-
-  const { markAsWinner, getAvailablePool } = useEmployeeStore()
-  const { addWinner, getCurrentPrize } = usePrizeStore()
-  const { getRiggedEmployees, activated: rigActivated } = useRigStore()
-
-  const rollingIntervalRef = useRef<number | null>(null)
-  const stopTimeoutRef = useRef<number | null>(null)
-
-  // 获取当前可用的抽奖池
-  const getPool = useCallback((prize: Prize): Employee[] => {
-    return getAvailablePool(prize.includeWinners)
-  }, [getAvailablePool])
-
-  // 开始抽奖
-  const start = useCallback((prize: Prize, count: number = 1) => {
-    const pool = getPool(prize)
-    
-    if (pool.length === 0) {
-      alert('抽奖池中没有可用人员！')
-      return false
+  const state = useLotteryStore()
+  const [activeEmployees, setActiveEmployees] = useState<Employee[]>([])
+  const round = useRef<{ pool: Employee[]; prize: Prize; count: number; weighted: boolean; rigged: string[] } | null>(null)
+  const timer = useRef<number>()
+  const mounted = useRef(true)
+  const start = useCallback((prize: Prize, count = 1) => {
+    if (useLotteryStore.getState().status !== 'idle') return false
+    const current = usePrizeStore.getState().getPrizeById(prize.id)
+    if (!current) return false
+    const pool = eligibleEmployees(useEmployeeStore.getState().employees, current)
+    if (!Number.isInteger(count) || count < 1 || count > Math.min(pool.length, current.count - current.winners.length, 30)) {
+      alert('抽取人数必须为 1–30，且不能超过剩余名额或可抽人数'); return false
     }
-
-    if (pool.length < count) {
-      alert(`抽奖池中只有 ${pool.length} 人，无法抽取 ${count} 人！`)
-      return false
-    }
-
-    startRolling(prize, count)
-
-    // 开始滚动效果
-    rollingIntervalRef.current = window.setInterval(() => {
-      // 随机选取展示
-      const shuffled = [...pool].sort(() => Math.random() - 0.5)
-      setRollingDisplays(shuffled.slice(0, Math.min(count, 5)))
-    }, 100)
-
+    const rig = useRigStore.getState()
+    round.current = { pool, prize: current, count, weighted: useThemeStore.getState().drawMode === 'weighted', rigged: rig.activated ? rig.getRiggedEmployees(current.id) : [] }
+    setActiveEmployees(pool)
+    useLotteryStore.getState().startRolling(current, count)
     return true
-  }, [getPool, startRolling, setRollingDisplays])
-
-  // 停止抽奖
-  const stop = useCallback(() => {
-    if (status !== 'rolling' || !currentPrize) return
-
-    // 清除滚动定时器
-    if (rollingIntervalRef.current) {
-      clearInterval(rollingIntervalRef.current)
-      rollingIntervalRef.current = null
-    }
-
-    setStatus('stopping')
-
-    // 从抽奖池中随机选取中奖者
-    const pool = getPool(currentPrize)
-    
-    let winners: Employee[] = []
-
-    // 检查是否有内定人员
-    if (rigActivated) {
-      const riggedIds = getRiggedEmployees(currentPrize.id)
-      // 筛选出在当前池中的内定人员
-      const riggedInPool = pool.filter((emp) => riggedIds.includes(emp.id))
-      
-      if (riggedInPool.length > 0) {
-        // 优先选择内定人员
-        const riggedWinners = riggedInPool.slice(0, drawCount)
-        const remaining = drawCount - riggedWinners.length
-        
-        if (remaining > 0) {
-          // 内定人员不够，剩余的随机选
-          const nonRiggedPool = pool.filter((emp) => !riggedIds.includes(emp.id))
-          const shuffled = [...nonRiggedPool].sort(() => Math.random() - 0.5)
-          winners = [...riggedWinners, ...shuffled.slice(0, remaining)]
-        } else {
-          winners = riggedWinners
-        }
-      } else {
-        // 没有匹配的内定人员，正常随机
-        const shuffled = [...pool].sort(() => Math.random() - 0.5)
-        winners = shuffled.slice(0, drawCount)
-      }
-    } else {
-      // 未激活内定，正常随机
-      const shuffled = [...pool].sort(() => Math.random() - 0.5)
-      winners = shuffled.slice(0, drawCount)
-    }
-
-    // 延迟显示结果（模拟减速效果）
-    stopTimeoutRef.current = window.setTimeout(() => {
-      // 更新状态
-      winners.forEach((winner) => {
-        markAsWinner(winner.id, currentPrize.id)
-        addWinner(currentPrize.id, winner.id)
-      })
-
-      stopRolling(winners)
-
-      // 再延迟一下显示中奖弹窗
-      setTimeout(() => {
-        showWinners()
-      }, 500)
-    }, 1500)
-  }, [status, currentPrize, drawCount, getPool, setStatus, markAsWinner, addWinner, stopRolling, showWinners, rigActivated, getRiggedEmployees])
-
-  // 关闭中奖展示
-  const closeWinnerDisplay = useCallback(() => {
-    reset()
-  }, [reset])
-
-  // 切换开始/停止
-  const toggle = useCallback((prize?: Prize, count: number = 1) => {
-    if (status === 'idle') {
-      const targetPrize = prize || getCurrentPrize()
-      if (targetPrize) {
-        const remaining = targetPrize.count - targetPrize.winners.length
-        if (remaining > 0) {
-          start(targetPrize, Math.min(remaining, count))
-        }
-      }
-    } else if (status === 'rolling') {
-      stop()
-    } else if (status === 'showing') {
-      closeWinnerDisplay()
-    }
-  }, [status, getCurrentPrize, start, stop, closeWinnerDisplay])
-
-  // 清理
-  useEffect(() => {
-    return () => {
-      if (rollingIntervalRef.current) {
-        clearInterval(rollingIntervalRef.current)
-      }
-      if (stopTimeoutRef.current) {
-        clearTimeout(stopTimeoutRef.current)
-      }
+  }, [])
+  const stop = useCallback(async () => {
+    const store = useLotteryStore.getState()
+    if (store.status !== 'rolling' || !round.current) return
+    const { pool, prize, count, weighted, rigged } = round.current
+    store.setStatus('stopping') // Synchronous lock: repeated clicks cannot draw twice.
+    const preset = pool.filter(e => rigged.includes(e.id)).slice(0, count)
+    const others = pool.filter(e => !preset.some(p => p.id === e.id))
+    const winners = [...preset, ...(count > preset.length ? drawEmployees(others, count - preset.length, weighted) : [])]
+    try {
+      // Persist both tables atomically before revealing this exact result.
+      await commitWinners(prize.id, winners)
+      if (!mounted.current) return
+      store.stopRolling(winners)
+      timer.current = window.setTimeout(() => useLotteryStore.getState().showWinners(), 1500)
+    } catch (error) {
+      if (mounted.current) { store.reset(); alert(`结果未保存，请重试：${String(error)}`) }
     }
   }, [])
-
-  return {
-    status,
-    currentPrize,
-    currentWinners,
-    drawCount,
-    start,
-    stop,
-    toggle,
-    closeWinnerDisplay,
-    reset,
-    setCurrentPrize,
-  }
+  const closeWinnerDisplay = useCallback(() => {
+    if (useLotteryStore.getState().status !== 'showing') return
+    window.clearTimeout(timer.current)
+    round.current = null
+    useLotteryStore.getState().reset()
+    setActiveEmployees([])
+  }, [])
+  const toggle = useCallback((prize?: Prize, count = 1) => {
+    const status = useLotteryStore.getState().status
+    if (status === 'idle') { const target = prize || usePrizeStore.getState().getCurrentPrize(); if (target) start(target, count) }
+    else if (status === 'rolling') void stop()
+    else if (status === 'showing') closeWinnerDisplay()
+  }, [start, stop, closeWinnerDisplay])
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false; window.clearTimeout(timer.current); useLotteryStore.getState().reset() }
+  }, [])
+  return { ...state, activeEmployees, start, stop, toggle, closeWinnerDisplay }
 }

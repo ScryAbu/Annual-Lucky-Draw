@@ -4,7 +4,7 @@ import { useEmployeeStore } from '../../stores/employeeStore'
 import { useThemeStore } from '../../stores/themeStore'
 import { parseExcelFile, getExcelHeaders, autoDetectFieldMapping, convertToEmployees } from '../../utils/excelParser'
 import { FieldMapping, DEFAULT_FIELD_MAPPING, Employee } from '../../types'
-// uuid available if needed
+import { assignMissingIds } from '../../utils/participants'
 import * as XLSX from 'xlsx'
 import ImageCropper from '../ImageCropper'
 
@@ -15,37 +15,6 @@ interface ImportStats {
   updated?: number
   added?: number
   isMerge?: boolean
-}
-
-const normalizeKeyPart = (value: string, fallback: string) => {
-  const normalized = value
-    .trim()
-    .replace(/\s+/g, '_')
-    .replace(/[^\w\u4e00-\u9fa5-]/g, '')
-  return normalized || fallback
-}
-
-const ensureEmployeeIds = (list: Employee[]): Employee[] => {
-  const used = new Set<string>()
-  return list.map((emp, index) => {
-    const rawId = emp.id.trim()
-    if (rawId && !used.has(rawId)) {
-      used.add(rawId)
-      return { ...emp, id: rawId }
-    }
-
-    const baseId = `AUTO_${normalizeKeyPart(emp.name, 'EMP')}_${normalizeKeyPart(emp.department, 'DEPT')}`
-    let generatedId = baseId
-    let suffix = 1
-
-    while (used.has(generatedId)) {
-      suffix++
-      generatedId = `${baseId}_${suffix}`
-    }
-
-    used.add(generatedId)
-    return { ...emp, id: generatedId || `AUTO_EMP_${index + 1}` }
-  })
 }
 
 export default function DataImport() {
@@ -64,7 +33,7 @@ export default function DataImport() {
   // 员工管理相关状态
   const [showEmployeeForm, setShowEmployeeForm] = useState(false)
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
-  const [employeeForm, setEmployeeForm] = useState({ id: '', name: '', department: '', photoFile: '', photoData: '', points: 0 })
+  const [employeeForm, setEmployeeForm] = useState({ id: '', name: '', department: '', photoFile: '', photoData: '', points: 0, weight: 1 })
   
   // 图片裁剪相关状态
   const [showCropper, setShowCropper] = useState(false)
@@ -90,16 +59,6 @@ export default function DataImport() {
     
     const worksheet = XLSX.utils.json_to_sheet(templateData)
     worksheet['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 20 }]
-    
-    // 添加说明行
-    XLSX.utils.sheet_add_aoa(worksheet, [
-      [''],
-      ['【使用说明】'],
-      ['1. 姓名为必填项；工号可留空，系统会自动生成唯一工号'],
-      ['2. 照片文件名需与照片文件夹中的文件名一致（支持 jpg/png 格式）'],
-      ['3. 如不填照片文件名，系统会尝试用工号或姓名匹配照片'],
-      ['4. 导入时请先选择照片所在的文件夹'],
-    ], { origin: 'A5' })
     
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, '员工名单')
@@ -127,6 +86,7 @@ export default function DataImport() {
       '姓名': emp.name,
       '部门': emp.department,
       '照片文件名': emp.photoFile || '',
+      '权重': emp.weight ?? 1,
       '积分': typeof emp.points === 'number' ? emp.points : 0,
       '是否中奖': emp.isWinner ? '是' : '否',
       '中奖奖项ID': emp.prizeId || '',
@@ -194,7 +154,9 @@ export default function DataImport() {
 
   // 处理导入数据（通用函数）
   const processImportData = useCallback(() => {
-    const employeeList = ensureEmployeeIds(convertToEmployees(excelData, fieldMapping))
+    let employeeList: Employee[]
+    try { employeeList = assignMissingIds(convertToEmployees(excelData, fieldMapping), employees) }
+    catch (error) { alert(String(error)); return null }
     
     let withPhoto = 0
     let withoutPhoto = 0
@@ -216,7 +178,7 @@ export default function DataImport() {
     })
 
     return { employeesWithPhotos, withPhoto, withoutPhoto }
-  }, [excelData, fieldMapping, photos])
+  }, [excelData, fieldMapping, photos, employees])
 
   // 覆盖导入
   const handleImportReplace = useCallback(() => {
@@ -228,8 +190,10 @@ export default function DataImport() {
       }
     }
 
-    const { employeesWithPhotos, withPhoto, withoutPhoto } = processImportData()
-    setEmployees(employeesWithPhotos)
+    const processed = processImportData()
+    if (!processed) return
+    const { employeesWithPhotos, withPhoto, withoutPhoto } = processed
+    if (!setEmployees(employeesWithPhotos)) return
     setImportStats({ total: employeesWithPhotos.length, withPhoto, withoutPhoto })
     setExcelFile(null)
     setExcelData([])
@@ -240,7 +204,9 @@ export default function DataImport() {
   const handleImportMerge = useCallback(() => {
     if (excelData.length === 0) return
 
-    const { employeesWithPhotos, withPhoto, withoutPhoto } = processImportData()
+    const processed = processImportData()
+    if (!processed) return
+    const { employeesWithPhotos, withPhoto, withoutPhoto } = processed
     
     // 合并逻辑：相同工号的更新，不同的新增
     const existingMap = new Map(employees.map(e => [e.id, e]))
@@ -257,6 +223,7 @@ export default function DataImport() {
           department: newEmp.department,
           photoFile: newEmp.photoFile,
           photoData: newEmp.photoData || existing.photoData,
+          weight: newEmp.weight ?? 1,
           points: (() => {
             const incoming = (newEmp as Employee).points
             return (typeof incoming === 'number' && incoming > 0) ? incoming : (existing.points ?? incoming ?? 0)
@@ -270,7 +237,7 @@ export default function DataImport() {
     })
 
     const mergedList = Array.from(existingMap.values())
-    setEmployees(mergedList)
+    if (!setEmployees(mergedList)) return
     setImportStats({ 
       total: employeesWithPhotos.length, 
       withPhoto, 
@@ -288,7 +255,7 @@ export default function DataImport() {
   // 打开添加员工表单
   const handleAddEmployee = useCallback(() => {
     setEditingEmployee(null)
-    setEmployeeForm({ id: '', name: '', department: '', photoFile: '', photoData: '', points: 0 })
+    setEmployeeForm({ id: '', name: '', department: '', photoFile: '', photoData: '', points: 0, weight: 1 })
     setShowEmployeeForm(true)
   }, [])
 
@@ -301,6 +268,7 @@ export default function DataImport() {
       department: emp.department,
       photoFile: emp.photoFile,
       photoData: emp.photoData || '',
+      weight: emp.weight ?? 1,
       points: typeof emp.points === 'number' ? emp.points : 0,
     })
     setShowEmployeeForm(true)
@@ -316,19 +284,19 @@ export default function DataImport() {
 
   // 提交员工表单
   const handleSubmitEmployee = useCallback(async () => {
-    if (!employeeForm.id || !employeeForm.name) {
-      alert('工号和姓名为必填项')
+    if (!employeeForm.id.trim() && !employeeForm.name.trim()) {
+      alert('姓名或工号 / 号码至少填写一项')
       return
     }
 
     // 检查工号是否重复
-    if (!editingEmployee && employees.some(e => e.id === employeeForm.id)) {
+    if (employees.some(e => e.id === employeeForm.id.trim() && e.id !== editingEmployee?.id)) {
       alert('工号已存在')
       return
     }
 
     const newEmployee: Employee = {
-      id: employeeForm.id,
+      id: editingEmployee?.id || employeeForm.id.trim() || assignMissingIds([{ ...employeeForm, isWinner: false }], employees)[0].id,
       name: employeeForm.name,
       department: employeeForm.department,
       photoFile: employeeForm.photoFile,
@@ -336,6 +304,8 @@ export default function DataImport() {
       prizeId: editingEmployee?.prizeId,
       photoData: employeeForm.photoData || editingEmployee?.photoData,
       points: Math.max(0, Number(employeeForm.points) || 0),
+      weight: Math.max(1, Math.min(100, Number(employeeForm.weight) || 1)),
+      winTime: editingEmployee?.winTime,
     }
 
     if (editingEmployee) {
@@ -669,6 +639,7 @@ export default function DataImport() {
                 <tr>
                   <th className="px-3 py-2 text-left">照片</th>
                   <th className="px-3 py-2 text-left">工号</th>
+                  <th>权重</th>
                   <th className="px-3 py-2 text-left">姓名</th>
                   <th className="px-3 py-2 text-left">部门</th>
                   <th className="px-3 py-2 text-center">积分</th>
@@ -693,6 +664,7 @@ export default function DataImport() {
                       )}
                     </td>
                     <td className="px-3 py-2">{emp.id}</td>
+                    <td>{emp.weight ?? 1}</td>
                     <td className="px-3 py-2">{emp.name}</td>
                     <td className="px-3 py-2">{emp.department}</td>
                     <td className="px-3 py-2 text-center">{typeof emp.points === 'number' ? emp.points : 0}</td>
@@ -742,7 +714,7 @@ export default function DataImport() {
 
               <div className="space-y-4">
                 <div>
-                  <label className={`block text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>工号 *</label>
+                  <label className={`block text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>工号 / 号码（可留空）</label>
                   <input
                     type="text"
                     value={employeeForm.id}
@@ -762,7 +734,7 @@ export default function DataImport() {
                 </div>
                 
                 <div>
-                  <label className={`block text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>姓名 *</label>
+                  <label className={`block text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>姓名（号码抽奖可留空）</label>
                   <input
                     type="text"
                     value={employeeForm.name}
@@ -797,6 +769,9 @@ export default function DataImport() {
                   />
                 </div>
 
+                <label className="block">常规抽奖权重（1–100）
+                  <input className="w-full p-2 rounded bg-slate-700 text-white" type="number" min="1" max="100" value={employeeForm.weight} onChange={e => setEmployeeForm({ ...employeeForm, weight: Number(e.target.value) })} />
+                </label>
                 <div>
                   <label className={`block text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>积分（终极大奖权重）</label>
                   <input

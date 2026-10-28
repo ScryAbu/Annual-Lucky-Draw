@@ -9,6 +9,7 @@ export interface Employee {
   prizeId?: string     // 中奖奖项ID
   winTime?: number     // 中奖时间戳
   points?: number      // 积分（用于终极大奖权重，默认为 0）
+  weight?: number      // 常规抽奖权重，1–100；等概率模式忽略
 }
 
 // 奖项类型
@@ -29,6 +30,7 @@ export type ThemeType = 'tech-dark' | 'minimal-light' | 'chinese-red'
 
 // 显示信息控制选项
 export interface DisplayOptions {
+  showPhoto: boolean
   showId: boolean    // 是否显示工号
   showDepartment: boolean  // 是否显示部门
   showName: boolean  // 是否显示姓名

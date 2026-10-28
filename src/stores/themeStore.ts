@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { ThemeType, ThemeConfig, CustomAssets } from '../types'
+import { ThemeType, ThemeConfig, CustomAssets, DisplayOptions } from '../types'
+
+import { DEFAULT_DISPLAY } from '../utils/display'
 
 // 预设背景选项（中国红主题）
 export const CHINESE_BACKGROUNDS = [
@@ -54,6 +56,12 @@ interface ThemeState {
   customAssets: CustomAssets
   eventTitle: string
   selectedBgId: string  // 预设背景ID
+  displayOptions: DisplayOptions
+  rotationSpeed: number
+  drawMode: 'fair' | 'weighted'
+  setDisplayOptions: (options: Partial<DisplayOptions>) => void
+  setRotationSpeed: (speed: number) => void
+  setDrawMode: (mode: 'fair' | 'weighted') => void
   showWinnerAvatar: boolean
   setTheme: (type: ThemeType) => void
   setCustomBackground: (base64: string | undefined) => void
@@ -71,6 +79,12 @@ export const useThemeStore = create<ThemeState>()(
       eventTitle: '年会抽奖',
       selectedBgId: 'newyear',
       showWinnerAvatar: true,
+      displayOptions: DEFAULT_DISPLAY,
+      rotationSpeed: 1.8,
+      drawMode: 'fair',
+      setDisplayOptions: (options) => set(state => ({ displayOptions: { ...state.displayOptions, ...options } })),
+      setRotationSpeed: (speed) => set({ rotationSpeed: Math.max(0.5, Math.min(6, speed)) }),
+      setDrawMode: (drawMode) => set({ drawMode }),
 
       setTheme: (type) => {
         const currentCustomBg = get().theme.customBackground
@@ -114,6 +128,12 @@ export const useThemeStore = create<ThemeState>()(
     }),
     {
       name: 'lottery-theme',
+      merge: (persisted, current) => {
+        const old = persisted as Partial<ThemeState> | undefined
+        return { ...current, ...old, displayOptions: {
+          ...DEFAULT_DISPLAY, showPhoto: old?.showWinnerAvatar ?? true, ...old?.displayOptions,
+        } }
+      },
     }
   )
 )

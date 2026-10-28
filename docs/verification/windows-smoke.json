@@ -1,0 +1,9 @@
+{
+  "packaged": true,
+  "version": "2.0.0",
+  "isolatedProfile": true,
+  "hiddenWindow": true,
+  "webSecurity": true,
+  "displayCount": 1,
+  "pageErrors": []
+}

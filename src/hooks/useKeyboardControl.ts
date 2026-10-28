@@ -22,7 +22,7 @@ export function useKeyboardControl(options: KeyboardControlOptions) {
   } = options
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (!enabled) return
+    if (!enabled || e.repeat) return
 
     // 忽略输入框中的按键
     if (

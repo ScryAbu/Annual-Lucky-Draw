@@ -7,7 +7,8 @@ import { useThemeStore } from '../stores/themeStore'
 import { usePrizeWheelEngine } from '../hooks/usePrizeWheelEngine'
 import { useKeyboardControl } from '../hooks/useKeyboardControl'
 import { useBGM } from '../hooks/useBGM'
-import { generateDefaultAvatar } from '../utils/imageLoader'
+import { ParticipantInfo } from '../components/ParticipantInfo'
+import { PresentationControls } from '../components/PresentationControls'
 
 export default function PrizeWheelPage() {
   const navigate = useNavigate()
@@ -53,6 +54,8 @@ export default function PrizeWheelPage() {
     onSpace: () => {
       if (status === 'rolling-prize') {
         stopSelectPrize()
+      } else if (status === 'showing') {
+        closeResult(); setShowEmployeeSelector(true)
       } else if (status === 'idle' && selectedEmployee) {
         startSelectPrize()
       }
@@ -60,7 +63,7 @@ export default function PrizeWheelPage() {
     onEscape: () => {
       if (status === 'showing') {
         closeResult()
-      } else {
+      } else if (status === 'idle') {
         navigate('/')
       }
     },
@@ -81,7 +84,9 @@ export default function PrizeWheelPage() {
 
   // 切换全屏
   const toggleFullscreen = useCallback(async () => {
-    await window.electronAPI.toggleFullscreen()
+    if (window.electronAPI) await window.electronAPI.toggleFullscreen()
+    else if (document.fullscreenElement) await document.exitFullscreen()
+    else await document.documentElement.requestFullscreen()
   }, [])
 
   // 处理员工选择
@@ -166,7 +171,7 @@ export default function PrizeWheelPage() {
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            onClick={() => navigate('/')}
+            disabled={status === 'rolling-prize' || status === 'stopping'} onClick={() => navigate('/')}
             className={`
               w-10 h-10 rounded-full flex items-center justify-center
               ${isDark ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-black/10 text-gray-800 hover:bg-black/20'}
@@ -235,17 +240,7 @@ export default function PrizeWheelPage() {
                     transition-all
                   `}
                 >
-                  <img
-                    src={emp.photoData || generateDefaultAvatar(emp.name, theme.colors.primary)}
-                    alt={emp.name}
-                    className="w-16 h-16 rounded-full object-cover mb-2"
-                  />
-                  <div className={`text-sm font-semibold text-center ${isDark ? 'text-white' : 'text-gray-800'}`}>
-                    {emp.name}
-                  </div>
-                  <div className={`text-xs text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {emp.department}
-                  </div>
+                  <ParticipantInfo employee={emp} />
                 </motion.button>
               ))}
             </div>
@@ -263,17 +258,7 @@ export default function PrizeWheelPage() {
               flex flex-col items-center p-6 rounded-xl
               ${isDark ? 'bg-indigo-600/80 border-2 border-indigo-400' : 'bg-blue-500/80 border-2 border-blue-400'}
             `}>
-              <img
-                src={selectedEmployee.photoData || generateDefaultAvatar(selectedEmployee.name, theme.colors.primary)}
-                alt={selectedEmployee.name}
-                className="w-24 h-24 rounded-full object-cover mb-3 ring-4 ring-yellow-400"
-              />
-              <div className={`text-xl font-bold ${isDark ? 'text-white' : 'text-white'}`}>
-                {selectedEmployee.name}
-              </div>
-              <div className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-200'}`}>
-                {selectedEmployee.department}
-              </div>
+              <ParticipantInfo employee={selectedEmployee} />
             </div>
           </motion.div>
         )}
@@ -381,7 +366,8 @@ export default function PrizeWheelPage() {
               `}
             >
               <div className={`text-3xl font-bold mb-4 ${isChineseRed ? 'text-yellow-400' : isDark ? 'text-white' : 'text-gray-800'}`}>
-                🎉 恭喜 {selectedEmployee.name} 🎉
+                🎉 恭喜中奖 🎉
+                  <ParticipantInfo employee={selectedEmployee} />
               </div>
               <div className={`text-xl ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
                 获得 {selectedPrize.name}
@@ -392,6 +378,7 @@ export default function PrizeWheelPage() {
       </div>
 
       {/* 底部控制栏 */}
+      <div className="absolute top-24 right-6 z-30"><PresentationControls /></div>
       <footer className={`
         absolute bottom-0 left-0 right-0 z-20
         flex items-center justify-center gap-8 px-6 py-6
@@ -416,8 +403,8 @@ export default function PrizeWheelPage() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={isRollingPrize ? stopSelectPrize : handleStart}
-            disabled={(!selectedEmployee && status === 'idle') || currentAvailablePrizes.length === 0}
+            onClick={isShowing ? () => { closeResult(); setShowEmployeeSelector(true) } : isRollingPrize ? stopSelectPrize : handleStart}
+            disabled={isStopping || (status === 'idle' && (!selectedEmployee || currentAvailablePrizes.length === 0))}
             className={`
               w-32 h-32 rounded-full font-bold text-xl
               flex items-center justify-center

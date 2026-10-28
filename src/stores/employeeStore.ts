@@ -1,13 +1,14 @@
 import { create } from 'zustand'
 import { Employee } from '../types'
 import { db } from '../db/database'
+import { usePrizeStore } from './prizeStore'
 
 interface EmployeeState {
   employees: Employee[]
   isLoading: boolean
   
   // Actions
-  setEmployees: (employees: Employee[]) => void
+  setEmployees: (employees: Employee[]) => boolean
   addEmployee: (employee: Employee) => void
   updateEmployee: (id: string, data: Partial<Employee>) => void
   markAsWinner: (id: string, prizeId: string) => void
@@ -27,8 +28,12 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
   isLoading: false,
 
   setEmployees: (employees) => {
+    if (new Set(employees.map(e => e.id)).size !== employees.length) { alert('存在重复工号 / 号码，请修改后导入'); return false }
+    const ids = new Set(employees.map(e => e.id))
+    if (usePrizeStore.getState().prizes.some(p => p.winners.some(id => !ids.has(id)))) { alert('请先在配置页清除抽奖记录，再覆盖或删除中奖人员'); return false }
     set({ employees })
     get().saveToDB()
+    return true
   },
 
   addEmployee: (employee) => {
@@ -70,10 +75,7 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
     get().saveToDB()
   },
 
-  clearAll: () => {
-    set({ employees: [] })
-    db.employees.clear()
-  },
+  clearAll: () => { get().setEmployees([]) },
 
   loadFromDB: async () => {
     set({ isLoading: true })
@@ -89,8 +91,10 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
   saveToDB: async () => {
     try {
       const { employees } = get()
-      await db.employees.clear()
-      await db.employees.bulkAdd(employees)
+      await db.transaction('rw', db.employees, async () => {
+        await db.employees.clear()
+        await db.employees.bulkPut(employees)
+      })
     } catch (error) {
       console.error('Failed to save employees to DB:', error)
     }

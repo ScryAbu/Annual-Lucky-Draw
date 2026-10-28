@@ -1,5 +1,6 @@
 import { useCallback, useRef, useEffect, useState } from 'react'
-import { useEmployeeStore } from '../stores/employeeStore'
+import { commitWinners } from '../utils/commitWinners'
+import { randomUnit } from '../utils/draw'
 import { usePrizeStore } from '../stores/prizeStore'
 import { Employee, Prize } from '../types'
 
@@ -12,9 +13,11 @@ export function usePrizeWheelEngine() {
   const [currentPrizeIndex, setCurrentPrizeIndex] = useState(0) // 当前选择框位置
   const [isDecelerating, setIsDecelerating] = useState(false) // 是否正在减速
 
-  const { markAsWinner } = useEmployeeStore()
-  const { getAvailablePrizes, addWinner } = usePrizeStore()
+  const { getAvailablePrizes } = usePrizeStore()
 
+  const lock = useRef(false)
+  const mounted = useRef(true)
+  const resultTimeoutRef = useRef<number>()
   const prizeIntervalRef = useRef<number | null>(null)
   const decelerateTimeoutRef = useRef<number | null>(null)
   const selectedEmployeeRef = useRef<Employee | null>(null)
@@ -31,6 +34,7 @@ export function usePrizeWheelEngine() {
 
   // 开始选择奖品（轮盘滚动）
   const startSelectPrize = useCallback(() => {
+    if (lock.current) return false
     if (!selectedEmployeeRef.current) {
       alert('请先选择抽奖人！')
       return false
@@ -42,6 +46,7 @@ export function usePrizeWheelEngine() {
       return false
     }
 
+    lock.current = true
     availablePrizesRef.current = availablePrizes
     setStatus('rolling-prize')
     setIsDecelerating(false)
@@ -62,7 +67,7 @@ export function usePrizeWheelEngine() {
 
   // 停止选择奖品（带惯性效果）
   const stopSelectPrize = useCallback(() => {
-    if (status !== 'rolling-prize') return
+    if (status !== 'rolling-prize' || decelerateTimeoutRef.current !== null) return
 
     setIsDecelerating(true)
     setStatus('stopping')
@@ -78,9 +83,9 @@ export function usePrizeWheelEngine() {
 
     // 惯性减速：逐渐减慢速度，随机移动几格后停止
     let speed = 100 // 开始减速时的速度
-    let stepsRemaining = Math.floor(Math.random() * 5) + 3 // 随机移动3-7格
+    let stepsRemaining = Math.floor(randomUnit() * 5) + 3 // 随机移动3-7格
 
-    const decelerate = () => {
+    const decelerate = async () => {
       if (stepsRemaining <= 0) {
         // 停止，确定最终奖品
         const finalIndex = currentIndexRef.current
@@ -88,18 +93,15 @@ export function usePrizeWheelEngine() {
         setSelectedPrize(finalPrize)
         setCurrentPrizeIndex(finalIndex)
 
-        // 分配奖品给员工
         const currentEmployee = selectedEmployeeRef.current
-        if (currentEmployee) {
-          markAsWinner(currentEmployee.id, finalPrize.id)
-          addWinner(finalPrize.id, currentEmployee.id)
+        try {
+          if (!currentEmployee) throw new Error('人员未选择')
+          await commitWinners(finalPrize.id, [currentEmployee])
+          if (!mounted.current) return
+          resultTimeoutRef.current = window.setTimeout(() => { setStatus('showing'); setIsDecelerating(false) }, 500)
+        } catch (error) {
+          if (mounted.current) { lock.current = false; decelerateTimeoutRef.current = null; setStatus('idle'); setIsDecelerating(false); alert(`保存失败：${String(error)}`) }
         }
-
-        // 显示结果
-        setTimeout(() => {
-          setStatus('showing')
-          setIsDecelerating(false)
-        }, 500)
         return
       }
 
@@ -116,10 +118,13 @@ export function usePrizeWheelEngine() {
 
     // 开始减速
     decelerateTimeoutRef.current = window.setTimeout(decelerate, speed)
-  }, [status, currentPrizeIndex, markAsWinner, addWinner])
+  }, [status])
 
   // 关闭结果展示
   const closeResult = useCallback(() => {
+    lock.current = false
+    decelerateTimeoutRef.current = null
+    availablePrizesRef.current = []
     setStatus('idle')
     setSelectedEmployee(null)
     selectedEmployeeRef.current = null
@@ -131,6 +136,8 @@ export function usePrizeWheelEngine() {
 
   // 重置
   const reset = useCallback(() => {
+    lock.current = false
+    window.clearTimeout(resultTimeoutRef.current)
     if (prizeIntervalRef.current) {
       clearInterval(prizeIntervalRef.current)
       prizeIntervalRef.current = null
@@ -150,7 +157,10 @@ export function usePrizeWheelEngine() {
 
   // 清理
   useEffect(() => {
+    mounted.current = true
     return () => {
+      mounted.current = false
+      window.clearTimeout(resultTimeoutRef.current)
       if (prizeIntervalRef.current) {
         clearInterval(prizeIntervalRef.current)
       }

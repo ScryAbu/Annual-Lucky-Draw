@@ -2,138 +2,58 @@ import { useCallback, useRef, useState, useEffect } from 'react'
 import { useEmployeeStore } from '../stores/employeeStore'
 import { usePrizeStore } from '../stores/prizeStore'
 import { Employee, Prize } from '../types'
+import { eligibleEmployees, randomUnit } from '../utils/draw'
+import { commitWinners } from '../utils/commitWinners'
 
-type UltimateStatus = 'idle' | 'rolling' | 'stopping' | 'showing'
-
+type Status = 'idle' | 'rolling' | 'stopping' | 'showing'
+const weight = (e: Employee) => Number.isFinite(e.points) ? Math.max(0, e.points ?? 0) : 0
+function weighted(pool: Employee[]) {
+  let ticket = randomUnit() * pool.reduce((sum, e) => sum + weight(e), 0)
+  return pool.find(e => (ticket -= weight(e)) < 0) ?? pool[pool.length - 1]
+}
 export function useUltimatePrizeEngine() {
-  const [status, setStatus] = useState<UltimateStatus>('idle')
+  const [status, setStatus] = useState<Status>('idle')
+  const lock = useRef<Status>('idle')
   const [selectedPrize, setSelectedPrize] = useState<Prize | null>(null)
   const [winner, setWinner] = useState<Employee | null>(null)
   const [rollingDisplay, setRollingDisplay] = useState<Employee | null>(null)
-
-  const { employees, markAsWinner } = useEmployeeStore()
-  const { addWinner } = usePrizeStore()
-  const rollingIntervalRef = useRef<number | null>(null)
-  const selectedPrizeRef = useRef<Prize | null>(null)
-
-  useEffect(() => {
-    selectedPrizeRef.current = selectedPrize
-  }, [selectedPrize])
-
-  useEffect(() => {
-    return () => {
-      if (rollingIntervalRef.current) clearInterval(rollingIntervalRef.current)
-    }
-  }, [])
-
-  // 确保积分为非负整数（避免 Excel/表单传入字符串或小数）
-  const getWeight = useCallback((emp: Employee): number => {
-    const p = emp.points
-    if (p == null || p === '') return 0
-    const n = Number(p)
-    return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0
-  }, [])
-
-  // 参与终极大奖的员工：积分 > 0
-  const getEligiblePool = useCallback((): Employee[] => {
-    return employees.filter((emp) => getWeight(emp) > 0)
-  }, [employees, getWeight])
-
-  // 总权重（整数，避免浮点误差）
-  const getTotalWeight = useCallback((): number => {
-    return getEligiblePool().reduce((sum, emp) => sum + getWeight(emp), 0)
-  }, [getEligiblePool, getWeight])
-
-  // 每人中奖概率（0~1），便于界面展示
-  const getWinChance = useCallback((emp: Employee): number => {
-    const total = getTotalWeight()
-    if (total <= 0) return 0
-    return getWeight(emp) / total
-  }, [getTotalWeight, getWeight])
-
-  // 按权重随机抽取一人（整数权重 + 整数随机，保证概率严格按权重）
-  const drawWeighted = useCallback((pool: Employee[], totalWeight: number): Employee => {
-    if (pool.length === 0) return pool[0] as never
-    if (totalWeight <= 0) return pool[Math.floor(Math.random() * pool.length)]
-    // [0, totalWeight) 的整数，保证每人区间长度 = 权重
-    const r = Math.floor(Math.random() * totalWeight)
-    let acc = 0
-    for (const emp of pool) {
-      const w = getWeight(emp)
-      if (r < acc + w) return emp
-      acc += w
-    }
-    return pool[pool.length - 1]
-  }, [getWeight])
-
-  const startRolling = useCallback((prize: Prize) => {
-    const pool = getEligiblePool()
-    const totalWeight = getTotalWeight()
-
-    if (pool.length === 0) {
-      alert('没有可参与终极大奖的员工！请先在员工数据管理中为员工设置积分（积分 > 0）。')
-      return false
-    }
-    if (totalWeight <= 0) {
-      alert('所有参与者的积分均为 0，无法按权重抽奖。请设置积分。')
-      return false
-    }
-
-    setSelectedPrize(prize)
-    setWinner(null)
-    setStatus('rolling')
-
-    // 滚动展示：按权重概率随机切换显示
-    if (rollingIntervalRef.current) clearInterval(rollingIntervalRef.current)
-    rollingIntervalRef.current = window.setInterval(() => {
-      const drawn = drawWeighted(pool, totalWeight)
-      setRollingDisplay(drawn)
-    }, 80)
+  const employees = useEmployeeStore(s => s.employees)
+  const round = useRef<{ prize: Prize; pool: Employee[] }>()
+  const interval = useRef<number>(), timer = useRef<number>()
+  const mounted = useRef(true)
+  const getEligiblePool = useCallback(() => employees.filter(e => weight(e) > 0), [employees])
+  const getTotalWeight = useCallback(() => getEligiblePool().reduce((sum, e) => sum + weight(e), 0), [getEligiblePool])
+  const getWinChance = useCallback((e: Employee) => getTotalWeight() ? weight(e) / getTotalWeight() : 0, [getTotalWeight])
+  const startRolling = useCallback((requested: Prize) => {
+    if (lock.current !== 'idle') return false
+    const prize = usePrizeStore.getState().getPrizeById(requested.id)
+    if (!prize || prize.winners.length >= prize.count) { alert('奖项已抽完'); return false }
+    const pool = eligibleEmployees(useEmployeeStore.getState().employees, prize).filter(e => weight(e) > 0)
+    if (!pool.length) { alert('没有符合本奖项资格且积分大于 0 的人员'); return false }
+    round.current = { prize, pool }; lock.current = 'rolling'; setStatus('rolling'); setSelectedPrize(prize); setWinner(null)
+    setRollingDisplay(weighted(pool))
+    interval.current = window.setInterval(() => setRollingDisplay(weighted(pool)), 100)
     return true
-  }, [getEligiblePool, getTotalWeight, drawWeighted])
-
-  const stopRolling = useCallback(() => {
-    const prize = selectedPrizeRef.current
-    if (status !== 'rolling' || !prize) return
-
-    if (rollingIntervalRef.current) {
-      clearInterval(rollingIntervalRef.current)
-      rollingIntervalRef.current = null
-    }
-
-    setStatus('stopping')
-
-    const pool = getEligiblePool()
-    const totalWeight = getTotalWeight()
-    const drawn = drawWeighted(pool, totalWeight)
-
-    setWinner(drawn)
-    setRollingDisplay(drawn)
-
-    markAsWinner(drawn.id, prize.id)
-    addWinner(prize.id, drawn.id)
-
-    setTimeout(() => setStatus('showing'), 600)
-  }, [status, getEligiblePool, getTotalWeight, drawWeighted, markAsWinner, addWinner])
-
-  const closeResult = useCallback(() => {
-    setStatus('idle')
-    setSelectedPrize(null)
-    setWinner(null)
-    setRollingDisplay(null)
   }, [])
-
-  return {
-    status,
-    selectedPrize,
-    winner,
-    rollingDisplay,
-    getEligiblePool,
-    getTotalWeight,
-    getWeight,
-    getWinChance,
-    startRolling,
-    stopRolling,
-    closeResult,
-  }
+  const stopRolling = useCallback(async () => {
+    if (lock.current !== 'rolling' || !round.current) return
+    lock.current = 'stopping'; setStatus('stopping'); window.clearInterval(interval.current)
+    const { pool, prize } = round.current
+    const drawn = weighted(pool)
+    try {
+      await commitWinners(prize.id, [drawn])
+      if (!mounted.current) return
+      setWinner(drawn); setRollingDisplay(drawn)
+      timer.current = window.setTimeout(() => { lock.current = 'showing'; setStatus('showing') }, 600)
+    } catch (error) { if (mounted.current) { lock.current = 'idle'; setStatus('idle'); alert(`保存失败：${String(error)}`) } }
+  }, [])
+  const closeResult = useCallback(() => {
+    if (lock.current !== 'showing') return
+    lock.current = 'idle'; setStatus('idle'); setSelectedPrize(null); setWinner(null); setRollingDisplay(null)
+  }, [])
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false; window.clearInterval(interval.current); window.clearTimeout(timer.current) }
+  }, [])
+  return { status, selectedPrize, winner, rollingDisplay, getEligiblePool, getTotalWeight, getWeight: weight, getWinChance, startRolling, stopRolling, closeResult }
 }

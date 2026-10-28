@@ -1,214 +1,67 @@
-# 年会大屏抽奖软件
+# 年会与婚礼抽奖
 
-一款适用于年会现场的大屏抽奖软件，支持 Excel 名单导入、3D 抽奖动效、多主题切换。
+基于 Electron、React 18 和 React Three Fiber 的离线桌面抽奖工具。支持公司年会、婚礼姓名抽奖及纯号码抽奖。
 
-[English](./README.en.md) | 简体中文
+## 功能
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Electron-28-47848F?logo=electron" alt="Electron" />
-  <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react" alt="React" />
-  <img src="https://img.shields.io/badge/Three.js-0.160-black?logo=three.js" alt="Three.js" />
-  <img src="https://img.shields.io/badge/TypeScript-5.3-3178C6?logo=typescript" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/License-MIT-green" alt="License" />
-</p>
+- Excel 名单与照片导入，手动添加人员；姓名或号码至少填写一项。缺少工号时生成独立号码，同名人员不会合并。
+- 常规球体抽奖、选人抽奖品轮盘、积分终极大奖。单次常规抽取 1–30 人。
+- 名单不再每 100 毫秒随机更换：180 人以内同屏展示，更大名单每 8 秒按顺序轮播。轮播仅影响展示，整个符合资格的名单始终参与抽奖。
+- 停止后场景与中奖弹窗使用同一次抽取结果，人员和奖项在同一事务中保存。
+- 照片、姓名、工号 / 号码、部门分别开关；支持“只姓名”“只号码”，应用于场景与三种模式的人员展示。
+- 旋转速度 0.5–6 弧度/秒，按实际帧间隔计算。少量人员也会完整转动。
+- 默认等概率；可选择 1–100 倍人员权重。权重模式和指定中奖模式均在大屏标注。
+- 主题、标题、背景、Logo、音乐可配置；完整活动配置可导出到另一台电脑。
+- “投大屏”列出系统连接的显示器，将当前抽奖窗口移到所选屏并全屏。
 
-## 功能特性
+## 使用
 
-### 数据管理
-- **Excel 名单导入** - 支持 .xlsx / .xls 文件，自动识别字段映射
-- **增量/覆盖导入** - 可选择合并新数据或完全覆盖
-- **照片智能匹配** - 按「照片文件名 → 工号 → 姓名」顺序自动匹配
-- **头像裁切上传** - 内置图片裁切器，支持缩放、拖拽调整，裁切后自动压缩保存
-- **名单导出** - 导出当前员工数据为 Excel（含中奖状态）
-- **中奖名单导出** - 一键导出所有中奖记录到 Excel
-- **一键清空** - 快速清除员工数据或重置抽奖记录
+1. 在“数据导入”导入 Excel 或添加人员。可下载模板。工号 / 号码不是必填；只用号码时姓名可以留空。Excel 中使用文本格式或 `0000` 等显示格式可保留前导零。
+2. 在“奖项设置”添加奖品及名额，按需允许返场；同一个奖项不重复中奖。
+3. 在“外观设置”选择显示字段和旋转速度。婚礼可点“只显示姓名”；号码抽奖可点“只显示号码”。卡片直接显示人员号码，不显示渲染下标。
+4. 按需在人员编辑表单中设置常规抽奖权重，并在外观设置切换为“按人员权重”。积分只用于单独的终极大奖模式。
+5. 进入抽奖，选择奖项及本次人数，点击开始/停止或按空格。动画落定的人员即最终中奖者。
+6. 连接 HDMI 或在系统设置启用无线投屏后，点击“投大屏”。使用扩展屏时可选择显示器；使用镜像屏时与电脑显示同一画面。F11 或全屏按钮切换全屏。
+7. 在“配置迁移”导出完整 JSON，在另一台电脑导入。文件包含照片、音乐、中奖记录和指定中奖设置，请妥善保管；导入前先备份当前活动。
 
-### 抽奖功能
-- **3D 抽奖动效** - 基于 Three.js 的炫酷球体旋转效果，流畅无闪烁
-- **批量抽取** - 支持单次抽取任意数量，可直接输入抽取人数
-- **临时加奖** - 抽奖过程中可随时添加新奖项
-- **返场抽奖** - 支持已中奖人员再次参与抽奖
-- **断电保护** - 数据实时保存到 IndexedDB，异常关闭后可恢复
-- **显示信息控制** - 可自定义是否显示工号/部门/姓名
-- **智能数据处理** - 支持只有姓名的员工数据，自动适配显示内容
+无工号的增量导入会作为新人员追加；如需更新同一个人，请保留导出表中的号码。重复号码会拒绝导入。删除中奖人员前先清除抽奖记录，以免损坏奖项关联。
 
-### 外观定制
-- **三套主题风格** - 深色科技、白色极简、红色过年
-- **过年背景切换** - 红色主题下提供 3 套精美新年背景可选
-- **自定义背景** - 支持上传任意背景图（建议 1920×1080）
-- **公司 Logo** - 上传 Logo 显示在抽奖页面顶部
-- **活动标题自定义** - 设置年会活动名称（最多 30 字）
+## 开发与构建
 
-## 效果预览
+Node.js 22 LTS；Windows 构建 Windows 安装包，macOS 构建 Mac 安装包。
 
-| 深色科技主题 | 中国红主题 | 白色极简主题 |
-|:---:|:---:|:---:|
-| 🌑 现代科技风格 | 🏮 喜庆年会氛围 | ☀️ 简洁明亮风格 |
-
-## 快速开始
-
-### 环境要求
-
-- Node.js 18+
-- npm 或 yarn
-
-### 安装依赖
-
-```bash
-# 克隆仓库
-git clone https://github.com/yourusername/Annual-Lucky-Draw.git
-
-# 进入项目目录
+```sh
+git clone https://github.com/ScryAbu/Annual-Lucky-Draw.git
 cd Annual-Lucky-Draw
-
-# 安装依赖
-npm install
-```
-
-### 开发模式
-
-```bash
+npm ci
 npm run dev
 ```
 
-### 打包构建
-
-```bash
-npm run build
+```sh
+npm run typecheck
+npm test
+npm run build:web
+npm run dist:win  # Windows
+npm run dist:mac  # macOS，Intel x64 与 Apple Silicon arm64
 ```
 
-构建完成后，安装包将生成在 `release` 目录下。
+`release/` 存放安装包。CI 在 Windows 和 macOS 上验证并上传安装包到工作流产物，不自动发布 GitHub Release。
 
-## 使用说明
+Mac 选择与芯片匹配的 DMG；Apple Silicon 下载 `arm64`，Intel 下载 `x64`。未配置开发者证书时为未签名/未公证构建，正式分发前需在 Mac 实机验收并配置 Apple 签名、公证。Windows 本地无符号链接权限时可用以下命令生成未签名验收包：
 
-### 1. 数据导入
-
-1. 准备 Excel 文件，包含以下字段：
-   - 工号（必填）
-   - 姓名（必填）
-   - 部门
-   - 照片文件名
-
-2. 准备照片文件夹，照片命名与 Excel 中的「照片文件名」或「工号」对应
-
-3. 在配置页导入 Excel 和照片文件夹
-
-4. 选择导入方式：
-   - **增量导入**：合并新数据，保留现有数据
-   - **覆盖导入**：清空后重新导入
-
-5. 也可手动添加/编辑员工，上传照片时支持**裁切调整**
-
-### 2. 奖项设置
-
-1. 添加奖项，设置名称和中奖人数
-2. 可选择上传奖品展示图片
-3. 可设置是否包含已中奖人员（返场抽奖）
-
-### 3. 外观设置
-
-1. 选择主题风格（深色科技/白色极简/红色过年）
-2. **红色过年主题**下可切换 3 套精美新年背景
-3. 可上传自定义背景图（建议尺寸 1920×1080）
-4. 可上传公司 Logo
-5. 设置活动标题（如「XX公司2026年会抽奖」）
-
-### 4. 开始抽奖
-
-1. 点击「进入抽奖」按钮
-2. 选择要抽取的奖项
-3. 按空格键或点击开始按钮开始抽奖
-4. 再次按空格键停止，显示中奖者
-
-## 快捷键
-
-| 按键 | 功能 |
-|------|------|
-| 空格 | 开始/停止抽奖 |
-| ← / → | 切换奖项 |
-| ESC | 关闭弹窗/返回 |
-| F11 | 切换全屏 |
-
-## 技术栈
-
-| 分类 | 技术 |
-|------|------|
-| 前端框架 | React 18, TypeScript, Tailwind CSS |
-| 3D 引擎 | Three.js, @react-three/fiber, @react-three/drei |
-| 桌面端 | Electron 28, Vite 5 |
-| 状态管理 | Zustand |
-| 本地存储 | Dexie.js (IndexedDB) |
-| 动画效果 | Framer Motion |
-| 数据处理 | xlsx (SheetJS) |
-
-## 项目结构
-
-```
-Annual-Lucky-Draw/
-├── electron/           # Electron 主进程
-│   ├── main.ts         # 主进程入口
-│   └── preload.ts      # 预加载脚本
-├── src/
-│   ├── 3d/             # Three.js 3D 组件
-│   ├── assets/         # 静态资源
-│   ├── components/     # React 组件
-│   │   ├── DataImport/     # Excel 和照片导入
-│   │   ├── HistoryPanel/   # 抽奖历史记录
-│   │   ├── ImageCropper/   # 图片裁剪工具
-│   │   ├── LotteryScene/   # 3D 抽奖场景
-│   │   ├── PrizeManager/   # 奖项配置
-│   │   ├── ThemeSwitcher/  # 主题设置
-│   │   └── WinnerDisplay/  # 中奖展示
-│   ├── db/             # IndexedDB 数据库
-│   ├── hooks/          # 自定义 React Hooks
-│   ├── pages/          # 页面组件
-│   ├── stores/         # Zustand 状态管理
-│   ├── types/          # TypeScript 类型定义
-│   └── utils/          # 工具函数
-├── public/             # 公共静态文件
-└── release/            # 打包输出
+```sh
+npm run build:web
+npx electron-builder --win --publish never --config.win.signAndEditExecutable=false
 ```
 
-## 参与贡献
+## 验收与边界
 
-欢迎贡献代码！请随时提交 Pull Request。
+[闪烁根因、最小修复、需求对应及复现步骤](docs/lottery-2-validation.md)。[浏览器验收截图与记录](docs/verification/)。
 
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m '添加某个特性'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 提交 Pull Request
+抽奖数据存于本机 IndexedDB；复制安装程序不会带走用户数据，跨电脑必须导出活动配置。音乐和外观沿用本地存储，配置导入会在容量不足时拒绝并恢复旧设置；导入上限 100 MB。投屏采用单一抽奖窗口，不是远程网页直播或双窗口控制台。
 
-## 开源协议
+项目目录：`src/3d` 场景，`src/hooks` 抽奖控制，`src/utils` 抽取与迁移，`electron` 桌面能力，`tests` 回归验证。Agent 规则见 [AGENTS.md](AGENTS.md)。
 
-本项目基于 MIT 协议开源 - 查看 [LICENSE](LICENSE) 文件了解详情。
+## 许可证
 
-## 致谢
-
-- [Three.js](https://threejs.org/) - 3D 图形库
-- [React Three Fiber](https://docs.pmnd.rs/react-three-fiber) - React 的 Three.js 渲染器
-- [Electron](https://www.electronjs.org/) - 桌面应用框架
-- [Framer Motion](https://www.framer.com/motion/) - 动画库
-
-## 版本更新记录
-
-### v1.2.0 (2026-02-11)
-
-**功能改进：**
-- 优化抽奖人数设置，将按钮增减改为输入框，支持直接输入任意数量
-- 提升中奖展示体验，增加显示数量，卡片自适应大小
-- 添加显示信息控制选项，可自定义是否显示工号/部门/姓名
-- 优化部门名称过长的显示问题，添加悬停提示
-
-**Bug 修复：**
-- 修复点击开始抽奖闪烁不流畅的问题
-- 修复抽奖数量设置不生效的问题
-
-**数据处理优化：**
-- 支持只有姓名的员工数据导入
-- 智能适配显示内容，只显示实际存在的信息
-- 优化头像显示逻辑：≤10人时显示文字头像，>10人时只显示实际头像
-
----
-
-<p align="center">用 ❤️ 为公司年会打造</p>
+[MIT](LICENSE)

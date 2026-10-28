@@ -2,9 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 /**
- * 内定管理 Store
- * 使用独立的 localStorage key，不会出现在常规数据中
- * key 名称伪装为系统缓存
+ * 指定中奖设置；保留旧存储键以迁移历史设置，当前状态在大屏公开显示。
  */
 
 interface RigEntry {
@@ -15,7 +13,7 @@ interface RigEntry {
 interface RigState {
   // 内定列表
   rigList: RigEntry[]
-  // 是否已激活（需要通过暗门开启）
+  // 是否已激活
   activated: boolean
 
   // Actions
@@ -78,7 +76,7 @@ export const useRigStore = create<RigState>()(
       },
     }),
     {
-      name: 'sys-render-cache-v3', // 伪装成系统缓存的 key
+      name: 'sys-render-cache-v3', // 兼容旧版本存储键
     }
   )
 )

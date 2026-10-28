@@ -29,7 +29,7 @@ export default function LotteryScene({
 }: LotterySceneProps) {
   return (
     <div className="w-full h-full">
-      <Canvas>
+      <Canvas dpr={[1, 1.5]} gl={{ antialias: true }}>
         <PerspectiveCamera makeDefault position={[0, 0, 10]} fov={50} />
         
         <ambientLight intensity={0.5} />
@@ -47,10 +47,11 @@ export default function LotteryScene({
         
         <OrbitControls
           enablePan={false}
+          enabled={!winners.length}
           enableZoom={true}
           minDistance={5}
           maxDistance={20}
-          autoRotate={!isRolling}
+          autoRotate={false}
           autoRotateSpeed={0.5}
         />
       </Canvas>
