@@ -20,18 +20,22 @@ beforeEach(async () => {
   useLotteryStore.getState().reset(); useRigStore.getState().clearAll(); useThemeStore.getState().setDrawMode('fair')
 })
 afterEach(() => cleanup())
-it('150 人抽 5 人：重复开始/停止只提交一次，场景和弹窗同源', async () => {
+it('150 人抽 5 人：停止瞬间进入抽取中减速且不提前泄漏名单，减速完成后聚焦并同源揭晓弹窗', async () => {
   const hook = renderHook(() => useLotteryEngine())
   act(() => { expect(hook.result.current.start(prize, 5)).toBe(true); expect(hook.result.current.start(prize, 5)).toBe(false) })
   const snapshot = hook.result.current.activeEmployees
   await act(async () => { await Promise.all([hook.result.current.stop(), hook.result.current.stop()]) })
-  expect(hook.result.current.currentWinners).toHaveLength(5)
+  // 停止瞬间（status=stopping）不提前暴露 currentWinners，避免画面直接切为静态名单
+  expect(hook.result.current.status).toBe('stopping')
+  expect(hook.result.current.currentWinners).toHaveLength(0)
   expect(hook.result.current.activeEmployees).toBe(snapshot)
-  const ids = hook.result.current.currentWinners.map(e => e.id)
-  expect((await db.prizes.get('p'))?.winners).toEqual(ids)
-  expect((await db.employees.toArray()).filter(e => e.isWinner).map(e => e.id).sort()).toEqual([...ids].sort())
+  const persistedIds = (await db.prizes.get('p'))?.winners ?? []
+  expect(persistedIds).toHaveLength(5)
+  expect((await db.employees.toArray()).filter(e => e.isWinner).map(e => e.id).sort()).toEqual([...persistedIds].sort())
+  await waitFor(() => expect(hook.result.current.currentWinners).toHaveLength(5), { timeout: 2500 })
+  expect(hook.result.current.currentWinners.map(e => e.id)).toEqual(persistedIds)
   await waitFor(() => expect(hook.result.current.status).toBe('showing'), { timeout: 2500 })
-  expect(hook.result.current.currentWinners.map(e => e.id)).toEqual(ids)
+  expect(hook.result.current.currentWinners.map(e => e.id)).toEqual(persistedIds)
   act(() => hook.result.current.closeWinnerDisplay())
   expect(hook.result.current.status).toBe('idle')
 })

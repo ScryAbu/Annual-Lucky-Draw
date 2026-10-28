@@ -1,6 +1,6 @@
 {
   "name": "lottery-app",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "type": "module",
   "description": "年会大屏抽奖软件 - 支持3D动效、Excel导入、多主题切换、轮盘抽奖",
   "main": "dist-electron/main.cjs",

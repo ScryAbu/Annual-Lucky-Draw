@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { drawEmployees, eligibleEmployees, spherePositions, scenePage } from '../src/utils/draw'
-import { displayLines } from '../src/utils/display'
+import { drawEmployees, eligibleEmployees, spherePositions, effectPositions, scenePage } from '../src/utils/draw'
+import { displayLines, paintEmployeeCard } from '../src/utils/display'
 import { convertToEmployees, parseExcelFile } from '../src/utils/excelParser'
 import { DEFAULT_FIELD_MAPPING } from '../src/types'
 import * as XLSX from 'xlsx'
@@ -12,6 +12,11 @@ describe('抽奖、展示和导入', () => {
     expect(positions).toHaveLength(n)
     expect(positions.flat().every(Number.isFinite)).toBe(true)
     expect(positions.every(([x, , z]) => Math.hypot(x, z) > 0)).toBe(true)
+    for (const effect of ['sphere', 'helix', 'starfield', 'matrix'] as const) {
+      const effPos = effectPositions(n, effect, 1.35)
+      expect(effPos).toHaveLength(n)
+      expect(effPos.flat().every(Number.isFinite)).toBe(true)
+    }
     const pool = people(n)
     expect(Array.from({ length: Math.ceil(n / 180) }, (_, page) => scenePage(pool, page)).flat()).toEqual(pool)
   })
@@ -31,9 +36,19 @@ describe('抽奖、展示和导入', () => {
     expect(eligibleEmployees(pool, { ...prize, winners: [pool[1].id] })).toEqual([pool[2]])
     expect(eligibleEmployees(pool, { ...prize, includeWinners: true, winners: [pool[1].id] })).toEqual([pool[0], pool[2]])
   })
-  it('只姓名、只号码不泄漏其他字段', () => {
-    expect(displayLines(people(1)[0], { showId: false, showName: true, showDepartment: false, showPhoto: false })).toEqual(['参与者0'])
-    expect(displayLines(people(1)[0], { showId: true, showName: false, showDepartment: false, showPhoto: false })).toEqual(['0001'])
+  it('只姓名、只号码不泄漏其他字段，名片绘制输出对应文本', () => {
+    const emp = people(1)[0]
+    expect(displayLines(emp, { showId: false, showName: true, showDepartment: false, showPhoto: false })).toEqual(['参与者0'])
+    expect(displayLines(emp, { showId: true, showName: false, showDepartment: false, showPhoto: false })).toEqual(['0001'])
+    const drawnTexts: string[] = []
+    const mockCtx = {
+      beginPath() {}, roundRect() {}, fill() {}, stroke() {}, save() {}, restore() {}, clearRect() {},
+      moveTo() {}, lineTo() {}, fillRect() {}, drawImage() {},
+      createLinearGradient: () => ({ addColorStop() {} }),
+      fillText: (text: string) => drawnTexts.push(text),
+    } as unknown as CanvasRenderingContext2D
+    paintEmployeeCard(mockCtx, emp, { showId: true, showName: true, showDepartment: false, showPhoto: false }, '#6366f1')
+    expect(drawnTexts).toEqual(['0001', '参与者0'])
   })
   it('Excel 允许只姓名或只号码，保留格式化前导零', () => {
     const sheet = XLSX.utils.aoa_to_sheet([['工号', '姓名'], [1, ''], ['', '同名'], ['', '同名']]); sheet.A2.z = '0000'

@@ -28,6 +28,9 @@ export interface Prize {
 // 主题类型
 export type ThemeType = 'tech-dark' | 'minimal-light' | 'chinese-red'
 
+// 3D 抽奖场景动效形态
+export type SceneEffectType = 'sphere' | 'helix' | 'starfield' | 'matrix'
+
 // 显示信息控制选项
 export interface DisplayOptions {
   showPhoto: boolean
