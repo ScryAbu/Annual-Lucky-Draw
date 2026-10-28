@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "exceptions": [
+    {
+      "repository": "C:/Users/29241/Project/personal/Annual-Lucky-Draw",
+      "path": "src/assets/back2.jpg",
+      "rule": "BINARY-CONTENT-UNVERIFIED",
+      "applicability": "both",
+      "classification": "reviewed-binary-asset",
+      "reason": "2026-10-28 visually inspected by Codex: existing decorative New Year background; no credentials or personal data",
+      "blob_shas": [
+        "38b1f15dbab1632dac94259be544274dd1b54091"
+      ]
+    },
+    {
+      "repository": "C:/Users/29241/Project/personal/Annual-Lucky-Draw",
+      "path": "src/assets/back3.jpg",
+      "rule": "BINARY-CONTENT-UNVERIFIED",
+      "applicability": "both",
+      "classification": "reviewed-binary-asset",
+      "reason": "2026-10-28 visually inspected by Codex: existing decorative New Year background; no credentials or personal data",
+      "blob_shas": [
+        "9ee80fb0f0fd398681b56a75db7d155414adac8e"
+      ]
+    },
+    {
+      "repository": "C:/Users/29241/Project/personal/Annual-Lucky-Draw",
+      "path": "src/assets/newyear.jpg",
+      "rule": "BINARY-CONTENT-UNVERIFIED",
+      "applicability": "both",
+      "classification": "reviewed-binary-asset",
+      "reason": "2026-10-28 visually inspected by Codex: existing decorative New Year background; no credentials or personal data",
+      "blob_shas": [
+        "76bc9f8d7234971e48abd3f33a794502dcf3f0ba"
+      ]
+    },
+    {
+      "repository": "C:/Users/29241/Project/personal/Annual-Lucky-Draw",
+      "path": "docs/verification/150-rolling.png",
+      "rule": "BINARY-CONTENT-UNVERIFIED",
+      "applicability": "both",
+      "classification": "reviewed-binary-asset",
+      "reason": "2026-10-28 visually inspected by Codex: synthetic participant/empty-config screenshot from isolated regression test; no credentials or real attendee data",
+      "blob_shas": [
+        "e06d825b6eafe754949213955eb7bcf6dcb5e0ed"
+      ]
+    },
+    {
+      "repository": "C:/Users/29241/Project/personal/Annual-Lucky-Draw",
+      "path": "docs/verification/numbers-only.png",
+      "rule": "BINARY-CONTENT-UNVERIFIED",
+      "applicability": "both",
+      "classification": "reviewed-binary-asset",
+      "reason": "2026-10-28 visually inspected by Codex: synthetic participant/empty-config screenshot from isolated regression test; no credentials or real attendee data",
+      "blob_shas": [
+        "363e88acbe5b80d6d5492d1eb5e8a8368403ab1c"
+      ]
+    },
+    {
+      "repository": "C:/Users/29241/Project/personal/Annual-Lucky-Draw",
+      "path": "docs/verification/three-people.png",
+      "rule": "BINARY-CONTENT-UNVERIFIED",
+      "applicability": "both",
+      "classification": "reviewed-binary-asset",
+      "reason": "2026-10-28 visually inspected by Codex: synthetic participant/empty-config screenshot from isolated regression test; no credentials or real attendee data",
+      "blob_shas": [
+        "3c090c782499bfe24953cba0379549de064a6113"
+      ]
+    },
+    {
+      "repository": "C:/Users/29241/Project/personal/Annual-Lucky-Draw",
+      "path": "docs/verification/windows-packaged.png",
+      "rule": "BINARY-CONTENT-UNVERIFIED",
+      "applicability": "both",
+      "classification": "reviewed-binary-asset",
+      "reason": "2026-10-28 visually inspected by Codex: synthetic participant/empty-config screenshot from isolated regression test; no credentials or real attendee data",
+      "blob_shas": [
+        "62920c6d3700a704b34be0b10d302dfa47cd6d89"
+      ]
+    },
+    {
+      "repository": "C:/Users/29241/Project/personal/Annual-Lucky-Draw",
+      "path": "docs/verification/winners-five.png",
+      "rule": "BINARY-CONTENT-UNVERIFIED",
+      "applicability": "both",
+      "classification": "reviewed-binary-asset",
+      "reason": "2026-10-28 visually inspected by Codex: synthetic participant/empty-config screenshot from isolated regression test; no credentials or real attendee data",
+      "blob_shas": [
+        "1de2c6278291198b20f00e7313c72688485f13a4"
+      ]
+    }
+  ]
+}

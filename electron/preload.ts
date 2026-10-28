@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 // 定义暴露给渲染进程的 API
 const electronAPI = {
+  listDisplays: (): Promise<Array<{ id: number; label: string }>> => ipcRenderer.invoke('list-displays'),
+  presentOnDisplay: (id: number): Promise<void> => ipcRenderer.invoke('present-on-display', id),
   // 选择 Excel 文件
   selectExcel: (): Promise<{
     path: string

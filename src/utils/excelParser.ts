@@ -10,6 +10,7 @@ export const parseExcelFile = (buffer: ArrayBuffer): ExcelRow[] => {
   // 转换为 JSON，使用第一行作为表头
   const data = XLSX.utils.sheet_to_json<ExcelRow>(worksheet, {
     defval: '',
+    raw: false,
   })
   
   return data
@@ -40,11 +41,11 @@ export const autoDetectFieldMapping = (headers: string[]): FieldMapping => {
   const mapping: FieldMapping = { ...DEFAULT_FIELD_MAPPING }
   
   const patterns: Record<string, string[]> = {
-    id: ['工号', '员工号', '编号', 'id', 'ID', '工号ID'],
+    id: ['工号', '员工号', '编号', '号码', '序号', 'id', 'ID', '工号ID'],
     name: ['姓名', '名字', '员工姓名', 'name', 'Name'],
     department: ['部门', '所属部门', '部门名称', 'dept', 'department'],
     photoFile: ['照片', '照片文件名', '头像', 'photo', 'avatar', '图片'],
-    points: ['积分', '分数', '权重', 'points', 'score', 'weight'],
+    points: ['积分', '分数', 'points', 'score'],
   }
   
   for (const [field, keywords] of Object.entries(patterns)) {
@@ -52,7 +53,7 @@ export const autoDetectFieldMapping = (headers: string[]): FieldMapping => {
       keywords.some((k) => h.toLowerCase().includes(k.toLowerCase()))
     )
     if (found) {
-      (mapping as Record<string, string>)[field] = found
+      mapping[field as keyof FieldMapping] = found
     }
   }
   
@@ -65,17 +66,18 @@ export const convertToEmployees = (
   mapping: FieldMapping
 ): Employee[] => {
   return data
-    .filter((row) => row[mapping.name]) // 过滤无效行，只要求有姓名
+    .filter((row) => String(row[mapping.name] ?? '').trim() || String(row[mapping.id] ?? '').trim()) // 过滤无效行，只要求有姓名
     .map((row) => {
       const pointsCol = mapping.points ? row[mapping.points] : undefined
       const points = pointsCol != null ? Number(pointsCol) : undefined
       return {
-        id: String(row[mapping.id] || ''),
-        name: String(row[mapping.name] || ''),
+        id: String(row[mapping.id] ?? '').trim(),
+        name: String(row[mapping.name] ?? '').trim(),
         department: String(row[mapping.department] || ''),
         photoFile: String(row[mapping.photoFile] || ''),
         isWinner: false,
-        points: Number.isFinite(points) && points >= 0 ? points : 0,
+        weight: Math.max(1, Math.min(100, Number(row['权重'] ?? row['weight']) || 1)),
+        points: typeof points === 'number' && Number.isFinite(points) && points >= 0 ? points : 0,
       }
     })
 }

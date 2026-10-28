@@ -7,14 +7,14 @@ import { fileURLToPath } from 'url'
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
-    electron([
+    mode !== 'web' && electron([
       {
         entry: 'electron/main.ts',
         onstart(args) {
-          args.startup()
+          if (mode !== 'web') args.startup()
         },
         vite: {
           build: {
@@ -53,7 +53,7 @@ export default defineConfig({
         }
       }
     ]),
-    renderer()
+    mode !== 'web' && renderer()
   ],
   resolve: {
     alias: {
@@ -65,4 +65,4 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true
   }
-})
+}))

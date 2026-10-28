@@ -1,6 +1,6 @@
 {
   "name": "lottery-app",
-  "version": "1.2.2",
+  "version": "2.0.0",
   "type": "module",
   "description": "年会大屏抽奖软件 - 支持3D动效、Excel导入、多主题切换、轮盘抽奖",
   "main": "dist-electron/main.cjs",
@@ -9,24 +9,35 @@
     "build": "tsc && vite build && electron-builder",
     "preview": "vite preview",
     "electron:dev": "vite --config vite.config.ts",
-    "electron:build": "vite build && electron-builder"
+    "electron:build": "vite build && electron-builder",
+    "build:web": "tsc && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dist:win": "npm run build:web && electron-builder --win",
+    "dist:mac": "npm run build:web && electron-builder --mac",
+    "dev:web": "vite --mode web"
   },
   "dependencies": {
+    "@react-three/drei": "^9.92.7",
+    "@react-three/fiber": "^8.15.12",
+    "@tsparticles/react": "^3.0.0",
+    "dexie": "^3.2.4",
+    "framer-motion": "^10.18.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.21.0",
-    "@react-three/fiber": "^8.15.12",
-    "@react-three/drei": "^9.92.7",
     "three": "^0.160.0",
-    "zustand": "^4.4.7",
-    "dexie": "^3.2.4",
-    "xlsx": "^0.18.5",
-    "framer-motion": "^10.18.0",
-    "@tsparticles/react": "^3.0.0",
     "tsparticles": "^3.2.0",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "xlsx": "^0.18.5",
+    "zod": "^3.24.4",
+    "zustand": "^4.4.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.51.1",
+    "@react-three/test-renderer": "^8.2.4",
+    "@testing-library/react": "^16.1.0",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
     "@types/three": "^0.160.0",
@@ -35,12 +46,15 @@
     "autoprefixer": "^10.4.16",
     "electron": "^28.1.0",
     "electron-builder": "^24.9.1",
+    "fake-indexeddb": "^6.0.0",
+    "jsdom": "^25.0.1",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.3.3",
     "vite": "^5.0.10",
     "vite-plugin-electron": "^0.15.5",
-    "vite-plugin-electron-renderer": "^0.14.5"
+    "vite-plugin-electron-renderer": "^0.14.5",
+    "vitest": "^2.1.9"
   },
   "build": {
     "extends": "electron-builder.json"

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Particles, { initParticlesEngine } from '@tsparticles/react'
 import { loadSlim } from '@tsparticles/slim'
 import { Employee, Prize, ThemeType } from '../../types'
+import { useThemeStore } from '../../stores/themeStore'
 import { generateDefaultAvatar } from '../../utils/imageLoader'
 
 interface WinnerDisplayProps {
@@ -24,6 +25,7 @@ export default function WinnerDisplay({
   primaryColor,
   showAvatar = true,
 }: WinnerDisplayProps) {
+  const options = useThemeStore(s => s.displayOptions)
   // 初始化粒子引擎
   useEffect(() => {
     initParticlesEngine(async (engine) => {
@@ -162,7 +164,7 @@ export default function WinnerDisplay({
                   }}
                 >
                   {/* 照片（可选） */}
-                  {showAvatar && (
+                  {showAvatar && options.showPhoto && (
                     <motion.div
                       className={`
                         w-32 h-32 rounded-full overflow-hidden mb-4
@@ -190,18 +192,18 @@ export default function WinnerDisplay({
                   )}
 
                   {/* 姓名 */}
-                  <h3 className={`text-2xl font-bold mb-2 ${
+                  {options.showName && <h3 className={`text-2xl font-bold mb-2 ${
                     isDark ? 'text-white' : 'text-gray-800'
                   }`}>
                     {winner.name}
-                  </h3>
+                  </h3>}
 
                   {/* 工号和部门 */}
                   <div className={`text-sm space-y-1 ${
                     isDark ? 'text-gray-400' : 'text-gray-500'
                   }`}>
-                    <p>工号：{winner.id}</p>
-                    <p>部门：{winner.department}</p>
+                    {options.showId && <p className={`${options.showName ? 'text-2xl' : 'text-5xl'} font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{winner.id}</p>}
+                    {options.showDepartment && winner.department && <p>{winner.department}</p>}
                   </div>
                 </motion.div>
               ))}

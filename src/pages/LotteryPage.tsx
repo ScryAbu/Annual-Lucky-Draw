@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import LotteryScene from '../components/LotteryScene'
@@ -10,19 +10,22 @@ import { useThemeStore } from '../stores/themeStore'
 import { useRigStore } from '../stores/rigStore'
 import { useLotteryEngine } from '../hooks/useLotteryEngine'
 import { useKeyboardControl } from '../hooks/useKeyboardControl'
+import { eligibleEmployees, SCENE_PAGE_SIZE } from '../utils/draw'
+import { PresentationControls } from '../components/PresentationControls'
 import { useBGM } from '../hooks/useBGM'
 
 export default function LotteryPage() {
   const navigate = useNavigate()
-  const { employees, getAvailablePool } = useEmployeeStore()
+  const { employees } = useEmployeeStore()
   const { prizes, currentPrizeIndex, setCurrentPrizeIndex } = usePrizeStore()
-  const { theme, customAssets, eventTitle, showWinnerAvatar } = useThemeStore()
+  const { theme, customAssets, eventTitle, drawMode, setDrawMode } = useThemeStore()
   
   const {
     status,
     currentPrize,
     currentWinners,
     toggle,
+    activeEmployees,
     closeWinnerDisplay,
   } = useLotteryEngine()
 
@@ -35,6 +38,32 @@ export default function LotteryPage() {
   const rigClickCountRef = useRef(0)
   const rigClickTimerRef = useRef<number | null>(null)
 
+  // 隐蔽入口：空闲时快速点击可抽奖人数区域 5 次
+  const handleSecretClick = useCallback(() => {
+    if (status !== 'idle') return
+    rigClickCountRef.current += 1
+    if (rigClickTimerRef.current) {
+      clearTimeout(rigClickTimerRef.current)
+    }
+    if (rigClickCountRef.current >= 5) {
+      rigClickCountRef.current = 0
+      setShowRigPanel(true)
+    } else {
+      rigClickTimerRef.current = window.setTimeout(() => {
+        rigClickCountRef.current = 0
+      }, 2000)
+    }
+  }, [status])
+
+  useEffect(() => {
+    if (status !== 'idle') setShowRigPanel(false)
+  }, [status])
+
+  useEffect(() => {
+    return () => {
+      if (rigClickTimerRef.current) clearTimeout(rigClickTimerRef.current)
+    }
+  }, [])
   const [showHistory, setShowHistory] = useState(false)
   const [showPrizeSelector, setShowPrizeSelector] = useState(false)
   const [showAddPrize, setShowAddPrize] = useState(false)
@@ -44,27 +73,9 @@ export default function LotteryPage() {
   const isDark = theme.type !== 'minimal-light'
   const isChineseRed = theme.type === 'chinese-red'
 
-  // 隐蔽入口：快速点击可抽奖人数区域 5 次
-  const handleSecretClick = useCallback(() => {
-    rigClickCountRef.current += 1
-    
-    if (rigClickTimerRef.current) {
-      clearTimeout(rigClickTimerRef.current)
-    }
-    
-    if (rigClickCountRef.current >= 5) {
-      rigClickCountRef.current = 0
-      setShowRigPanel(true)
-    } else {
-      rigClickTimerRef.current = window.setTimeout(() => {
-        rigClickCountRef.current = 0
-      }, 2000)
-    }
-  }, [])
-
   // 当前选中的奖项
   const selectedPrize = prizes[currentPrizeIndex]
-  const availablePool = getAvailablePool(selectedPrize?.includeWinners)
+  const availablePool = useMemo(() => selectedPrize ? eligibleEmployees(employees, selectedPrize) : employees, [employees, selectedPrize])
   
   // 计算剩余可抽人数
   const remainingCount = selectedPrize 
@@ -73,6 +84,8 @@ export default function LotteryPage() {
   
   // 最大可抽人数（取剩余人数和可用池的较小值）
   const maxDrawCount = Math.min(remainingCount, availablePool.length, 30) // 最多一次抽30人
+
+  useEffect(() => { if (status === 'idle') setDrawCount(count => Math.max(1, Math.min(count, maxDrawCount))) }, [maxDrawCount, status])
 
   // 获取背景样式
   const backgroundStyle = useMemo(() => {
@@ -88,20 +101,22 @@ export default function LotteryPage() {
 
   // 切换全屏
   const toggleFullscreen = useCallback(async () => {
-    await window.electronAPI.toggleFullscreen()
+    if (window.electronAPI) await window.electronAPI.toggleFullscreen()
+    else if (document.fullscreenElement) await document.exitFullscreen()
+    else await document.documentElement.requestFullscreen()
   }, [])
 
   // 快捷键控制
   useKeyboardControl({
     onSpace: () => {
       if (selectedPrize) {
-        toggle(selectedPrize)
+        toggle(selectedPrize, drawCount)
       }
     },
     onEscape: () => {
       if (status === 'showing') {
         closeWinnerDisplay()
-      } else {
+      } else if (status === 'idle') {
         navigate('/')
       }
     },
@@ -116,7 +131,7 @@ export default function LotteryPage() {
       }
     },
     onF11: toggleFullscreen,
-    enabled: !showPrizeSelector && !showAddPrize,
+    enabled: !showPrizeSelector && !showAddPrize && !showRigPanel && !showHistory,
   })
 
   // 开始/停止抽奖
@@ -202,9 +217,9 @@ export default function LotteryPage() {
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            onClick={() => navigate('/')}
+            disabled={status !== 'idle'} onClick={() => navigate('/')}
             className={`
-              w-10 h-10 rounded-full flex items-center justify-center
+              min-w-10 h-10 px-2 rounded-full flex items-center justify-center
               ${isDark ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-black/10 text-gray-800 hover:bg-black/20'}
             `}
           >
@@ -233,7 +248,7 @@ export default function LotteryPage() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setShowAddPrize(true)}
+            disabled={status !== 'idle'} onClick={() => setShowAddPrize(true)}
             className={`
               px-4 py-2 rounded-xl font-medium
               ${isDark 
@@ -245,31 +260,37 @@ export default function LotteryPage() {
             + 临时加奖
           </motion.button>
 
+          <PresentationControls />
           {/* 全屏按钮 */}
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={toggleFullscreen}
             className={`
-              w-10 h-10 rounded-full flex items-center justify-center
+              min-w-10 h-10 px-2 rounded-full flex items-center justify-center
               ${isDark ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-black/10 text-gray-800 hover:bg-black/20'}
             `}
           >
-            ⛶
+            ⛶ 全屏
           </motion.button>
         </div>
       </header>
 
       {/* 3D 抽奖场景 */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-x-0 top-20 bottom-56 z-0">
         <LotteryScene
-          employees={availablePool}
+          employees={status === 'idle' ? availablePool : activeEmployees}
           isRolling={status === 'rolling'}
           winners={currentWinners}
           primaryColor={theme.colors.primary}
         />
       </div>
 
+      {availablePool.length > SCENE_PAGE_SIZE && (
+        <div className="absolute top-24 left-6 text-sm bg-black/50 text-white rounded-lg p-3 pointer-events-none">
+          <p>全部 {availablePool.length} 人按名单顺序分批展示，每 8 秒换页；所有人均参与抽奖</p>
+        </div>
+      )}
       {/* 底部控制栏 */}
       <footer className={`
         absolute bottom-0 left-0 right-0 z-20
@@ -280,7 +301,7 @@ export default function LotteryPage() {
         <div className="flex-1 flex justify-start">
           <motion.button
             whileHover={{ scale: 1.02 }}
-            onClick={() => setShowPrizeSelector(!showPrizeSelector)}
+            disabled={status !== 'idle'} onClick={() => setShowPrizeSelector(!showPrizeSelector)}
             className={`
               px-6 py-3 rounded-xl flex items-center gap-3
               ${isDark ? 'bg-white/10 text-white' : 'bg-black/10 text-gray-800'}
@@ -391,12 +412,9 @@ export default function LotteryPage() {
                 >
                   -
                 </button>
-                <span className={`
-                  w-12 text-center text-xl font-bold
-                  ${isChineseRed ? 'text-yellow-400' : isDark ? 'text-white' : 'text-gray-800'}
-                `}>
-                  {drawCount}
-                </span>
+                <input type="number" aria-label="本次抽取人数" min="1" max={maxDrawCount}
+                  className="w-16 text-center text-xl font-bold bg-transparent"
+                  value={drawCount} onChange={e => setDrawCount(Math.max(1, Math.min(maxDrawCount, Math.floor(Number(e.target.value)) || 1)))} />
                 <button
                   onClick={() => setDrawCount(Math.min(maxDrawCount, drawCount + 1))}
                   disabled={drawCount >= maxDrawCount}
@@ -424,7 +442,7 @@ export default function LotteryPage() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handleToggle}
-            disabled={!selectedPrize || isCompleted}
+            disabled={!selectedPrize || isCompleted || status === 'stopping'}
             className={`
               w-32 h-32 rounded-full font-bold text-xl
               flex items-center justify-center
@@ -448,7 +466,7 @@ export default function LotteryPage() {
           </p>
         </div>
 
-        {/* 右侧：人数显示（隐蔽入口：快速点击 5 次打开内定面板） */}
+        {/* 右侧：人数显示（隐蔽入口：快速点击 5 次打开高级设置面板） */}
         <div className="flex-1 flex justify-end">
           <div 
             onClick={handleSecretClick}
@@ -474,7 +492,7 @@ export default function LotteryPage() {
         onClose={closeWinnerDisplay}
         themeType={theme.type}
         primaryColor={theme.colors.primary}
-        showAvatar={showWinnerAvatar}
+
       />
 
       {/* 历史记录面板 */}
@@ -595,23 +613,16 @@ export default function LotteryPage() {
         )}
       </AnimatePresence>
 
-      {/* 内定面板（伪装为系统诊断工具） */}
-      <AnimatePresence>
-        {showRigPanel && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm"
-            onClick={() => setShowRigPanel(false)}
+      {/* 高级设置面板 */}
+      {showRigPanel && status === 'idle' && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={() => setShowRigPanel(false)}
+        >
+          <div
+            className="w-full max-w-2xl max-h-[80vh] bg-slate-900 rounded-2xl shadow-2xl mx-4 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-2xl max-h-[80vh] bg-slate-900 rounded-2xl shadow-2xl mx-4 overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-            >
               {/* 标题栏 - 伪装 */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
                 <div className="flex items-center gap-2">
@@ -621,7 +632,7 @@ export default function LotteryPage() {
                 <div className="flex items-center gap-3">
                   {/* 激活开关 */}
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <span className="text-xs text-gray-500">启用</span>
+                    <span className="text-xs text-gray-500">启用定向分配</span>
                     <button
                       onClick={() => setRigActivated(!rigActivated)}
                       className={`
@@ -647,7 +658,23 @@ export default function LotteryPage() {
                 </div>
               </div>
 
-              <div className="p-6 overflow-y-auto max-h-[calc(80vh-64px)]">
+              <div className="p-6 overflow-y-auto max-h-[calc(80vh-64px)] space-y-4">
+                {/* 抽奖概率调节 */}
+                <div className="bg-white/5 rounded-xl p-4 flex items-center justify-between">
+                  <div>
+                    <div className="text-white font-medium text-sm">抽奖采样模式</div>
+                    <div className="text-xs text-gray-500 mt-0.5">开启权重抽取后，按名单管理中的系数分配中奖概率</div>
+                  </div>
+                  <select
+                    className="bg-slate-800 text-white text-sm rounded-lg px-3 py-1.5 border border-white/10 outline-none"
+                    value={drawMode}
+                    onChange={(e) => setDrawMode(e.target.value as 'fair' | 'weighted')}
+                  >
+                    <option value="fair">标准均匀</option>
+                    <option value="weighted">系数加权</option>
+                  </select>
+                </div>
+
                 {/* 奖项选择 + 搜索员工 */}
                 {prizes.length > 0 && (
                   <div className="space-y-4">
@@ -693,10 +720,10 @@ export default function LotteryPage() {
 
                           {/* 添加人员 */}
                           {riggedIds.length < (prize.count - prize.winners.length) && (
-                            <RigEmployeeSearch
+                              <RigEmployeeSearch
                               prizeId={prize.id}
-                              employees={employees.filter(
-                                (e) => !e.isWinner && !riggedIds.includes(e.id)
+                              employees={eligibleEmployees(employees, prize).filter(
+                                (e) => !riggedIds.includes(e.id)
                               )}
                               onAdd={(empId) => addRig(prize.id, empId)}
                             />
@@ -706,11 +733,10 @@ export default function LotteryPage() {
                     })}
                   </div>
                 )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

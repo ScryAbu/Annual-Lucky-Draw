@@ -152,8 +152,10 @@ export const usePrizeStore = create<PrizeState>((set, get) => ({
   saveToDB: async () => {
     try {
       const { prizes } = get()
-      await db.prizes.clear()
-      await db.prizes.bulkAdd(prizes)
+      await db.transaction('rw', db.prizes, async () => {
+        await db.prizes.clear()
+        await db.prizes.bulkPut(prizes)
+      })
     } catch (error) {
       console.error('Failed to save prizes to DB:', error)
     }

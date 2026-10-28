@@ -1,5 +1,7 @@
 // Electron API 类型声明
 interface ElectronAPI {
+  listDisplays: () => Promise<Array<{ id: number; label: string }>>
+  presentOnDisplay: (id: number) => Promise<void>
   selectExcel: () => Promise<{
     path: string
     name: string

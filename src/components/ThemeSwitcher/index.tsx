@@ -67,8 +67,7 @@ export default function ThemeSwitcher() {
     customAssets,
     eventTitle,
     setEventTitle,
-    showWinnerAvatar,
-    setShowWinnerAvatar,
+    displayOptions, setDisplayOptions, rotationSpeed, setRotationSpeed,
   } = useThemeStore()
   const isDark = theme.type !== 'minimal-light'
   const isChineseRed = theme.type === 'chinese-red'
@@ -329,19 +328,21 @@ export default function ThemeSwitcher() {
           显示选项
         </h3>
 
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showWinnerAvatar}
-            onChange={(e) => setShowWinnerAvatar(e.target.checked)}
-            className="w-5 h-5 rounded mt-0.5"
-          />
-          <div>
-            <p className={isDark ? 'text-gray-200' : 'text-gray-700'}>中奖弹窗显示头像</p>
-            <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-              关闭后只显示姓名与部门，不再显示默认头像占位
-            </p>
-          </div>
+        <p className="mb-3">球体、号码卡片及中奖界面使用同一组显示选项。</p>
+        <div className="flex flex-wrap gap-6">
+          {([['showPhoto', '照片'], ['showName', '姓名'], ['showId', '工号 / 号码'], ['showDepartment', '部门']] as const).map(([key, label]) => (
+            <label key={key} className="flex gap-2 items-center">
+              <input type="checkbox" checked={displayOptions[key]} onChange={e => setDisplayOptions({ [key]: e.target.checked })} />{label}
+            </label>
+          ))}
+        </div>
+        {!Object.values(displayOptions).some(Boolean) && <p role="alert">请至少选择一项，避免显示空白卡片。</p>}
+        <div className="flex gap-3 mt-4">
+          <button onClick={() => setDisplayOptions({ showPhoto: false, showName: true, showId: false, showDepartment: false })}>只显示姓名</button>
+          <button onClick={() => setDisplayOptions({ showPhoto: false, showName: false, showId: true, showDepartment: false })}>只显示号码</button>
+        </div>
+        <label className="block mt-6">旋转速度：{rotationSpeed.toFixed(1)} 弧度/秒
+          <input className="block w-full mt-2" type="range" min="0.5" max="6" step="0.1" value={rotationSpeed} onChange={e => setRotationSpeed(Number(e.target.value))} />
         </label>
       </div>
 

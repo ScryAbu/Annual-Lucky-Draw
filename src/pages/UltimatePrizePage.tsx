@@ -6,11 +6,12 @@ import { useThemeStore } from '../stores/themeStore'
 import { useUltimatePrizeEngine } from '../hooks/useUltimatePrizeEngine'
 import { useKeyboardControl } from '../hooks/useKeyboardControl'
 import { useBGM } from '../hooks/useBGM'
-import { generateDefaultAvatar } from '../utils/imageLoader'
+import { ParticipantInfo } from '../components/ParticipantInfo'
+import { PresentationControls } from '../components/PresentationControls'
 
 export default function UltimatePrizePage() {
   const navigate = useNavigate()
-  const { prizes, getAvailablePrizes } = usePrizeStore()
+  const { getAvailablePrizes } = usePrizeStore()
   const { theme, customAssets, eventTitle } = useThemeStore()
   const {
     status,
@@ -41,6 +42,7 @@ export default function UltimatePrizePage() {
   useKeyboardControl({
     onSpace: () => {
       if (status === 'rolling') stopRolling()
+      else if (status === 'showing') closeResult()
       else if (status === 'idle' && selectedPrizeId) {
         const p = availablePrizes.find((x) => x.id === selectedPrizeId)
         if (p) startRolling(p)
@@ -48,7 +50,7 @@ export default function UltimatePrizePage() {
     },
     onEscape: () => {
       if (status === 'showing') closeResult()
-      else navigate('/')
+      else if (status === 'idle') navigate('/')
     },
     enabled: true,
   })
@@ -65,7 +67,9 @@ export default function UltimatePrizePage() {
   }, [theme.customBackground])
 
   const toggleFullscreen = useCallback(async () => {
-    await window.electronAPI.toggleFullscreen()
+    if (window.electronAPI) await window.electronAPI.toggleFullscreen()
+    else if (document.fullscreenElement) await document.exitFullscreen()
+    else await document.documentElement.requestFullscreen()
   }, [])
 
   const handleStart = useCallback(() => {
@@ -119,7 +123,7 @@ export default function UltimatePrizePage() {
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            onClick={() => navigate('/')}
+            disabled={status === 'rolling' || status === 'stopping'} onClick={() => navigate('/')}
             className={`
               w-10 h-10 rounded-full flex items-center justify-center
               ${isDark ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-black/10 text-gray-800 hover:bg-black/20'}
@@ -268,17 +272,7 @@ export default function UltimatePrizePage() {
                 ${isShowing ? 'ring-4 ring-yellow-400' : ''}
               `}
             >
-              <img
-                src={displayEmployee.photoData || generateDefaultAvatar(displayEmployee.name, theme.colors.primary)}
-                alt={displayEmployee.name}
-                className="w-32 h-32 rounded-full object-cover mb-4 ring-4 ring-white/30"
-              />
-              <div className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>
-                {displayEmployee.name}
-              </div>
-              <div className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                {displayEmployee.department} · 积分 {(displayEmployee.points ?? 0)}
-              </div>
+              <ParticipantInfo employee={displayEmployee} />
             </div>
             {isShowing && winner && (
               <motion.p
@@ -294,6 +288,7 @@ export default function UltimatePrizePage() {
         )}
       </div>
 
+      <div className="absolute top-24 right-6 z-30"><PresentationControls /></div>
       <footer
         className={`
           absolute bottom-0 left-0 right-0 z-20
@@ -317,7 +312,7 @@ export default function UltimatePrizePage() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={isRolling ? stopRolling : handleStart}
+            onClick={isShowing ? closeResult : isRolling ? stopRolling : handleStart}
             disabled={status === 'idle' && (eligiblePool.length === 0 || availablePrizes.length === 0 || !selectedPrizeId)}
             className={`
               w-32 h-32 rounded-full font-bold text-xl flex items-center justify-center transition-all duration-300

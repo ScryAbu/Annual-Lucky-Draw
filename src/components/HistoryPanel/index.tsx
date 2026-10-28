@@ -12,7 +12,7 @@ interface HistoryPanelProps {
 
 export default function HistoryPanel({ isOpen, onToggle }: HistoryPanelProps) {
   const { getWinners } = useEmployeeStore()
-  const { prizes, getPrizeById } = usePrizeStore()
+  const { prizes } = usePrizeStore()
   const { theme } = useThemeStore()
   
   const [isExporting, setIsExporting] = useState(false)
@@ -26,18 +26,11 @@ export default function HistoryPanel({ isOpen, onToggle }: HistoryPanelProps) {
 
     setIsExporting(true)
     try {
-      const exportData = winners.map((winner) => {
-        const prize = winner.prizeId ? getPrizeById(winner.prizeId) : null
-        return {
-          prize: prize?.name || '未知奖项',
-          id: winner.id,
-          name: winner.name,
-          department: winner.department,
-          winTime: winner.winTime 
-            ? new Date(winner.winTime).toLocaleString('zh-CN')
-            : '',
-        }
-      })
+      const exportData = prizes.flatMap(prize => prize.winners.flatMap(id => {
+        const winner = winners.find(e => e.id === id)
+        return winner ? [{ prize: prize.name, id: winner.id, name: winner.name, department: winner.department,
+          winTime: winner.prizeId === prize.id && winner.winTime ? new Date(winner.winTime).toLocaleString('zh-CN') : '' }] : []
+      }))
 
       const buffer = exportWinnersToExcel(exportData)
       const now = new Date().toISOString().slice(0, 10)
@@ -52,12 +45,12 @@ export default function HistoryPanel({ isOpen, onToggle }: HistoryPanelProps) {
     } finally {
       setIsExporting(false)
     }
-  }, [winners, getPrizeById])
+  }, [winners, prizes])
 
   // 按奖项分组
   const groupedWinners = prizes.map((prize) => ({
     prize,
-    winners: winners.filter((w) => w.prizeId === prize.id),
+    winners: winners.filter((w) => prize.winners.includes(w.id)),
   })).filter((g) => g.winners.length > 0)
 
   return (
