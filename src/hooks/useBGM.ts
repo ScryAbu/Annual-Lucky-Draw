@@ -1,150 +1,99 @@
-import { useRef, useCallback, useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useBgmStore } from '../stores/bgmStore'
 import { LotteryStatus } from '../types'
 
+type Track = 'idle' | 'rolling' | 'winner'
+
+const FADE_IN_MS = 400
+const FADE_OUT_MS = 350
+
+/** 抽奖状态 → 应播放的曲目；stopping（减速揭晓前）沿用滚动音乐 */
+export function trackForStatus(status: LotteryStatus): Track {
+  if (status === 'rolling' || status === 'stopping') return 'rolling'
+  if (status === 'showing') return 'winner'
+  return 'idle'
+}
+
 /**
- * BGM 播放控制 Hook
- * 根据抽奖状态自动切换播放对应的 BGM
+ * BGM 播放控制
+ * - 每次进入某段音乐（开始滚动 / 揭晓中奖 / 回到待机）都从头播放，绝不接着上次暂停的位置；
+ * - 是否循环由「音效设置」里每段音乐的循环开关决定；
+ * - 淡入淡出可被打断：快速连按开始/停止时，旧的淡出不会把新开始的音乐暂停掉。
  */
 export function useBGM(status: LotteryStatus) {
-  const {
-    idleBgm,
-    rollingBgm,
-    winnerBgm,
-    idleVolume,
-    rollingVolume,
-    winnerVolume,
-    bgmEnabled,
-  } = useBgmStore()
+  const store = useBgmStore()
+  const audios = useRef<Partial<Record<Track, HTMLAudioElement>>>({})
+  const fades = useRef(new Map<HTMLAudioElement, number>())
+  const current = useRef<Track | null>(null)
 
-  const idleAudioRef = useRef<HTMLAudioElement | null>(null)
-  const rollingAudioRef = useRef<HTMLAudioElement | null>(null)
-  const winnerAudioRef = useRef<HTMLAudioElement | null>(null)
+  const config = {
+    idle: { bgm: store.idleBgm, volume: store.idleVolume, loop: store.idleLoop },
+    rolling: { bgm: store.rollingBgm, volume: store.rollingVolume, loop: store.rollingLoop },
+    winner: { bgm: store.winnerBgm, volume: store.winnerVolume, loop: store.winnerLoop },
+  }
+  const configRef = useRef(config)
+  configRef.current = config
 
-  // 淡出音频
-  const fadeOut = useCallback((audio: HTMLAudioElement, duration: number = 500) => {
-    return new Promise<void>((resolve) => {
-      const startVolume = audio.volume
-      const steps = 20
-      const stepDuration = duration / steps
-      const volumeStep = startVolume / steps
-      let currentStep = 0
+  const target: Track | null = store.bgmEnabled ? trackForStatus(status) : null
+  const targetSrc = target ? config[target].bgm?.data ?? null : null
 
-      const interval = setInterval(() => {
-        currentStep++
-        audio.volume = Math.max(0, startVolume - volumeStep * currentStep)
-        if (currentStep >= steps) {
-          clearInterval(interval)
-          audio.pause()
-          audio.volume = startVolume
-          resolve()
-        }
-      }, stepDuration)
-    })
-  }, [])
+  useEffect(() => {
+    const cancelFade = (audio: HTMLAudioElement) => {
+      const id = fades.current.get(audio)
+      if (id !== undefined) { window.clearInterval(id); fades.current.delete(audio) }
+    }
+    const rampTo = (audio: HTMLAudioElement, to: number, ms: number, done?: () => void) => {
+      cancelFade(audio)
+      const from = audio.volume
+      const steps = Math.max(1, Math.round(ms / 25))
+      let step = 0
+      const id = window.setInterval(() => {
+        step++
+        audio.volume = Math.min(1, Math.max(0, from + (to - from) * (step / steps)))
+        if (step >= steps) { cancelFade(audio); done?.() }
+      }, 25)
+      fades.current.set(audio, id)
+    }
+    const stop = (track: Track) => {
+      const audio = audios.current[track]
+      if (!audio || audio.paused) return
+      rampTo(audio, 0, FADE_OUT_MS, () => { audio.pause(); audio.currentTime = 0 })
+    }
 
-  // 淡入音频
-  const fadeIn = useCallback((audio: HTMLAudioElement, targetVolume: number, duration: number = 500) => {
+    // 停掉不是目标的曲目
+    ;(['idle', 'rolling', 'winner'] as Track[]).forEach(t => { if (t !== target) stop(t) })
+    current.current = target
+    if (!target || !targetSrc) return
+
+    const { volume, loop } = configRef.current[target]
+    let audio = audios.current[target]
+    if (!audio) { audio = new Audio(); audio.preload = 'auto'; audios.current[target] = audio }
+    if (audio.src !== targetSrc) audio.src = targetSrc
+    cancelFade(audio)
+    audio.pause()
+    audio.loop = loop
+    audio.currentTime = 0 // 每次都从头播放
     audio.volume = 0
-    audio.play().catch(() => {})
-    const steps = 20
-    const stepDuration = duration / steps
-    const volumeStep = targetVolume / steps
-    let currentStep = 0
+    audio.play().catch(() => { /* 浏览器未获得用户手势时会拒绝自动播放，忽略 */ })
+    rampTo(audio, volume, FADE_IN_MS)
+  }, [target, targetSrc])
 
-    const interval = setInterval(() => {
-      currentStep++
-      audio.volume = Math.min(targetVolume, volumeStep * currentStep)
-      if (currentStep >= steps) {
-        clearInterval(interval)
-      }
-    }, stepDuration)
-  }, [])
-
-  // 停止所有音频
-  const stopAll = useCallback(() => {
-    const audios = [idleAudioRef.current, rollingAudioRef.current, winnerAudioRef.current]
-    audios.forEach((audio) => {
-      if (audio && !audio.paused) {
-        fadeOut(audio, 300)
-      }
-    })
-  }, [fadeOut])
-
-  // 播放指定音频
-  const playAudio = useCallback(
-    (audioRef: React.MutableRefObject<HTMLAudioElement | null>, src: string, volume: number, loop: boolean = true) => {
-      if (!bgmEnabled) return
-
-      // 先停止其他音频
-      const allRefs = [idleAudioRef, rollingAudioRef, winnerAudioRef]
-      const stopPromises = allRefs
-        .filter((ref) => ref !== audioRef && ref.current && !ref.current.paused)
-        .map((ref) => fadeOut(ref.current!, 300))
-
-      Promise.all(stopPromises).then(() => {
-        if (!audioRef.current) {
-          audioRef.current = new Audio(src)
-        } else if (audioRef.current.src !== src) {
-          audioRef.current.src = src
-        }
-
-        audioRef.current.loop = loop
-        fadeIn(audioRef.current, volume, 400)
-      })
-    },
-    [bgmEnabled, fadeOut, fadeIn]
-  )
-
-  // 根据状态切换 BGM
+  // 播放中调节音量 / 循环开关：直接作用于当前曲目，不重新开始
   useEffect(() => {
-    if (!bgmEnabled) {
-      stopAll()
-      return
-    }
+    const t = current.current
+    const audio = t ? audios.current[t] : undefined
+    if (!t || !audio || audio.paused || fades.current.has(audio)) return
+    audio.volume = config[t].volume
+    audio.loop = config[t].loop
+  })
 
-    switch (status) {
-      case 'idle':
-        if (idleBgm) {
-          playAudio(idleAudioRef, idleBgm.data, idleVolume, true)
-        } else {
-          stopAll()
-        }
-        break
-
-      case 'rolling':
-        if (rollingBgm) {
-          playAudio(rollingAudioRef, rollingBgm.data, rollingVolume, true)
-        }
-        break
-
-      case 'stopping':
-        // 保持滚动音乐，等待结果
-        break
-
-      case 'showing':
-        if (winnerBgm) {
-          playAudio(winnerAudioRef, winnerBgm.data, winnerVolume, false)
-        } else {
-          // 没有中奖音乐就静音
-          stopAll()
-        }
-        break
-    }
-  }, [status, bgmEnabled, idleBgm, rollingBgm, winnerBgm, idleVolume, rollingVolume, winnerVolume, playAudio, stopAll])
-
-  // 组件卸载时清理
   useEffect(() => {
+    const fadeMap = fades.current
+    const all = audios.current
     return () => {
-      ;[idleAudioRef, rollingAudioRef, winnerAudioRef].forEach((ref) => {
-        if (ref.current) {
-          ref.current.pause()
-          ref.current.src = ''
-          ref.current = null
-        }
-      })
+      fadeMap.forEach(id => window.clearInterval(id))
+      fadeMap.clear()
+      Object.values(all).forEach(audio => { if (audio) { audio.pause(); audio.removeAttribute('src'); audio.load() } })
     }
   }, [])
-
-  return { stopAll }
 }

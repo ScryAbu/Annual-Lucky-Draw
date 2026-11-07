@@ -53,6 +53,7 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null
+    screenWindow?.close()
   })
 }
 
@@ -235,10 +236,11 @@ ipcMain.handle('select-audio', async () => {
 })
 
 // 切换全屏
-ipcMain.handle('toggle-fullscreen', () => {
-  if (mainWindow) {
-    mainWindow.setFullScreen(!mainWindow.isFullScreen())
-    return mainWindow.isFullScreen()
+ipcMain.handle('toggle-fullscreen', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
+  if (win) {
+    win.setFullScreen(!win.isFullScreen())
+    return win.isFullScreen()
   }
   return false
 })
@@ -248,11 +250,66 @@ ipcMain.handle('is-fullscreen', () => {
   return mainWindow?.isFullScreen() || false
 })
 
-// Use the existing window: presentation and operator cannot diverge into two draw engines.
+// ==================== 大屏（观众）窗口 ====================
+// 抽奖引擎只在主控窗口运行；大屏窗口只渲染主控窗口推送来的状态，绝不自行抽取。
+// 大屏上收到的按键（例如翻页笔）转发回主控窗口处理。
+let screenWindow: BrowserWindow | null = null
+
+function displayLabel(display: Electron.Display, index: number) {
+  const tags = [
+    display.id === screen.getPrimaryDisplay().id ? '主屏' : '',
+    mainWindow && screen.getDisplayMatching(mainWindow.getBounds()).id === display.id ? '控制台所在' : '',
+  ].filter(Boolean).join(' · ')
+  return `${display.label || `显示器 ${index + 1}`}（${display.size.width}×${display.size.height}）${tags ? ` · ${tags}` : ''}`
+}
+
+function notifyScreenStatus() {
+  mainWindow?.webContents.send('screen-msg', { type: 'status', open: Boolean(screenWindow) })
+}
+
 ipcMain.handle('list-displays', () => screen.getAllDisplays().map((display, index) => ({
   id: display.id,
-  label: `${display.label || `显示器 ${index + 1}`} (${display.size.width}×${display.size.height})${display.id === screen.getPrimaryDisplay().id ? ' · 主屏' : ''}`,
+  label: displayLabel(display, index),
+  isOperator: Boolean(mainWindow && screen.getDisplayMatching(mainWindow.getBounds()).id === display.id),
 })))
+
+ipcMain.handle('screen-open', async (_event, id: number) => {
+  const display = screen.getAllDisplays().find(item => item.id === id)
+  if (!display || !mainWindow) throw new Error('显示器不可用')
+  if (!screenWindow) {
+    screenWindow = new BrowserWindow({
+      x: display.bounds.x,
+      y: display.bounds.y,
+      width: display.bounds.width,
+      height: display.bounds.height,
+      frame: false,
+      show: false,
+      backgroundColor: '#000000',
+      autoHideMenuBar: true,
+      title: '抽奖大屏',
+      webPreferences: {
+        preload: join(__dirname, 'preload.cjs'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        backgroundThrottling: false,
+      },
+    })
+    screenWindow.on('closed', () => { screenWindow = null; notifyScreenStatus() })
+    if (isDev) await screenWindow.loadURL('http://localhost:5173/#/screen')
+    else await screenWindow.loadFile(join(app.getAppPath(), 'dist', 'index.html'), { hash: '/screen' })
+  } else if (screenWindow.isFullScreen()) {
+    const win = screenWindow
+    await new Promise<void>(resolve => { win.once('leave-full-screen', () => resolve()); win.setFullScreen(false) })
+  }
+  screenWindow.setBounds(display.bounds)
+  screenWindow.showInactive()
+  screenWindow.setFullScreen(true)
+  // 焦点留在控制台，键盘和鼠标操作仍在笔记本上进行
+  mainWindow.focus()
+  notifyScreenStatus()
+})
+
+// 轮盘 / 终极大奖页面：把整个窗口移到所选显示器并全屏
 ipcMain.handle('present-on-display', async (_event, id: number) => {
   const display = screen.getAllDisplays().find(item => item.id === id)
   const win = mainWindow
@@ -263,4 +320,16 @@ ipcMain.handle('present-on-display', async (_event, id: number) => {
   win.setBounds(display.bounds)
   win.setFullScreen(true)
   win.focus()
+})
+
+ipcMain.handle('screen-close', () => {
+  screenWindow?.close()
+})
+
+ipcMain.handle('screen-is-open', () => Boolean(screenWindow))
+
+ipcMain.on('screen-relay', (event, msg: unknown) => {
+  const fromScreen = screenWindow && event.sender === screenWindow.webContents
+  const target = fromScreen ? mainWindow : screenWindow
+  target?.webContents.send('screen-msg', msg)
 })

@@ -83,18 +83,18 @@ export default function HistoryPanel({ isOpen, onToggle }: HistoryPanelProps) {
             transition={{ type: 'spring', damping: 20 }}
             className={`
               fixed right-0 top-0 bottom-0 w-80 z-30
-              ${isDark ? 'bg-slate-900/95' : 'bg-white/95'}
+              ${'bg-[var(--surface-solid)]'}
               backdrop-blur-md border-l
-              ${isDark ? 'border-white/10' : 'border-gray-200'}
+              ${'border-[var(--border)]'}
               flex flex-col
             `}
           >
             {/* 标题栏 */}
             <div className={`
               flex items-center justify-between px-4 py-4 border-b
-              ${isDark ? 'border-white/10' : 'border-gray-200'}
+              ${'border-[var(--border)]'}
             `}>
-              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+              <h3 className={`font-bold ${'text-[var(--text)]'}`}>
                 中奖记录
               </h3>
               <button
@@ -117,7 +117,7 @@ export default function HistoryPanel({ isOpen, onToggle }: HistoryPanelProps) {
             {/* 列表 */}
             <div className="flex-1 overflow-auto p-4">
               {winners.length === 0 ? (
-                <div className={`text-center py-12 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                <div className={`text-center py-12 ${'text-[var(--subtle)]'}`}>
                   <div className="text-4xl mb-2">🎯</div>
                   <p>暂无中奖记录</p>
                 </div>
@@ -133,10 +133,10 @@ export default function HistoryPanel({ isOpen, onToggle }: HistoryPanelProps) {
                             className="w-6 h-6 object-contain"
                           />
                         )}
-                        <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                        <h4 className={`font-semibold ${'text-[var(--text)]'}`}>
                           {prize.name}
                         </h4>
-                        <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        <span className={`text-xs ${'text-[var(--subtle)]'}`}>
                           ({prizeWinners.length}/{prize.count})
                         </span>
                       </div>
@@ -149,7 +149,7 @@ export default function HistoryPanel({ isOpen, onToggle }: HistoryPanelProps) {
                             animate={{ opacity: 1, x: 0 }}
                             className={`
                               flex items-center gap-3 p-3 rounded-xl
-                              ${isDark ? 'bg-white/5' : 'bg-gray-50'}
+                              ${'bg-[var(--surface)]'}
                             `}
                           >
                             {/* 头像 */}
@@ -173,10 +173,10 @@ export default function HistoryPanel({ isOpen, onToggle }: HistoryPanelProps) {
                             
                             {/* 信息 */}
                             <div className="flex-1 min-w-0">
-                              <p className={`font-medium truncate ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                              <p className={`font-medium truncate ${'text-[var(--text)]'}`}>
                                 {winner.name}
                               </p>
-                              <p className={`text-xs truncate ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                              <p className={`text-xs truncate ${'text-[var(--subtle)]'}`}>
                                 {winner.id} · {winner.department}
                               </p>
                             </div>

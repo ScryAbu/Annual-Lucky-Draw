@@ -13,14 +13,14 @@ try {
   const window = await app.firstWindow()
   const errors = []
   window.on('pageerror', e => errors.push(e.message))
-  await window.getByRole('button', { name: /数据导入/ }).waitFor()
+  await window.getByRole('button', { name: /人员名单/ }).waitFor()
   const info = await app.evaluate(({ app, BrowserWindow }) => ({
     packaged: app.isPackaged, version: app.getVersion(), userData: app.getPath('userData'),
     visible: BrowserWindow.getAllWindows()[0].isVisible(),
     webSecurity: BrowserWindow.getAllWindows()[0].webContents.getLastWebPreferences().webSecurity,
   }))
   assert.equal(info.packaged, true)
-  assert.equal(info.version, '2.0.0')
+  assert.equal(info.version, '2.2.0')
   assert.equal(info.userData.toLowerCase(), profile.toLowerCase())
   assert.equal(info.visible, false)
   assert.equal(info.webSecurity, true)

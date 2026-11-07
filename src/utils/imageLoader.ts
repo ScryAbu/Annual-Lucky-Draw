@@ -46,6 +46,7 @@ export const compressImage = (
       
       resolve(canvas.toDataURL('image/jpeg', quality))
     }
+    img.onerror = () => resolve(base64) // 解码失败时保留原图，不能让导入卡住
     img.src = base64
   })
 }

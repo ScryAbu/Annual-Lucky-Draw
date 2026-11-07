@@ -5,6 +5,7 @@ import { Employee, DisplayOptions, SceneEffectType } from '../types'
 import { useThemeStore } from '../stores/themeStore'
 import { paintEmployeeCard } from '../utils/display'
 import { effectPositions, scenePage, SCENE_PAGE_SIZE } from '../utils/draw'
+import { getCachedPhoto, loadPhoto, preloadPhotos, PhotoSource } from '../utils/photoCache'
 
 interface LotterySphereProps {
   employees: Employee[]
@@ -53,25 +54,27 @@ const PhotoCard = memo(function PhotoCard({
     const tex = new THREE.CanvasTexture(canvas)
     tex.colorSpace = THREE.SRGBColorSpace
 
-    const paint = (photo?: HTMLImageElement) => {
+    const paint = (photo?: PhotoSource) => {
       paintEmployeeCard(ctx, employee, options, primaryColor, photo)
       tex.needsUpdate = true
     }
 
-    paint()
+    // 命中缓存时直接画出照片，避免换页 / 开始抽奖时整屏先闪成纯色底卡
+    const src = options.showPhoto ? employee.photoData : undefined
+    const cached = getCachedPhoto(src)
+    paint(cached)
     const material = materialRef.current!
     material.map = tex
     material.color.set('white')
     material.needsUpdate = true
 
     let cancelled = false
-    const image = new Image()
-    image.onload = () => { if (!cancelled) paint(image) }
-    image.onerror = () => { /* Keep the already visible text fallback. */ }
-    if (options.showPhoto && employee.photoData) image.src = employee.photoData
+    if (src && !cached) {
+      loadPhoto(src).then(photo => { if (!cancelled && photo) paint(photo) })
+    }
 
     return () => {
-      cancelled = true; image.onload = null; image.onerror = null
+      cancelled = true
       if (material.map === tex) { material.map = null; material.needsUpdate = true }
       tex.dispose()
     }
@@ -164,12 +167,29 @@ export default function LotterySphere({ employees, isRolling, winners, primaryCo
   const sphereScale = useThemeStore(s => s.sphereScale)
   const sceneEffect = useThemeStore(s => s.sceneEffect)
 
+  // 名单内容不变时（例如开始抽奖时由「可抽名单」切到「冻结名单」）不回到第一页，避免整批卡片重建
+  const poolKey = useMemo(() => employees.map(e => e.id).join('|'), [employees])
+  const employeesRef = useRef(employees)
+  employeesRef.current = employees
+
   useEffect(() => {
     setPage(0)
-    if (employees.length <= SCENE_PAGE_SIZE || winners.length) return
-    const timer = window.setInterval(() => setPage(p => p + 1), 8000)
-    return () => clearInterval(timer)
-  }, [employees, winners.length])
+    if (employeesRef.current.length <= SCENE_PAGE_SIZE || winners.length) return
+    let cancelled = false
+    let timer = 0
+    const schedule = (current: number) => {
+      timer = window.setTimeout(async () => {
+        const next = current + 1
+        // 先把下一页的照片解码好再翻页，翻页瞬间卡片直接带照片出现
+        await preloadPhotos(scenePage(employeesRef.current, next).map(e => e.photoData))
+        if (cancelled) return
+        setPage(next)
+        schedule(next)
+      }, 8000)
+    }
+    schedule(0)
+    return () => { cancelled = true; window.clearTimeout(timer) }
+  }, [poolKey, winners.length])
 
   const displayed = useMemo(() => {
     const pageSlice = scenePage(employees, page)

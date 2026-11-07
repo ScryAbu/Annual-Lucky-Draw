@@ -191,7 +191,7 @@ export default function ImageCropper({
               }
             `}
           >
-            <h3 className={`text-lg font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}>
+            <h3 className={`text-lg font-bold mb-4 ${'text-[var(--text)]'}`}>
               调整头像
             </h3>
 
@@ -216,7 +216,7 @@ export default function ImageCropper({
 
             {/* 缩放控制 */}
             <div className="flex items-center gap-4 mb-6">
-              <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>缩放</span>
+              <span className={`text-sm ${'text-[var(--muted)]'}`}>缩放</span>
               <input
                 type="range"
                 min="0.5"
@@ -226,12 +226,12 @@ export default function ImageCropper({
                 onChange={(e) => setScale(parseFloat(e.target.value))}
                 className="flex-1 accent-indigo-500"
               />
-              <span className={`text-sm w-12 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              <span className={`text-sm w-12 ${'text-[var(--muted)]'}`}>
                 {Math.round(scale * 100)}%
               </span>
             </div>
 
-            <p className={`text-xs mb-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+            <p className={`text-xs mb-4 ${'text-[var(--subtle)]'}`}>
               提示：拖动图片调整位置，滚轮或滑块调整缩放
             </p>
 

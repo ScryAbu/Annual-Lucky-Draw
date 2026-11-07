@@ -18,6 +18,11 @@ interface BgmState {
   rollingVolume: number
   winnerVolume: number
 
+  // 是否循环播放（每次进入该阶段都会从头开始）
+  idleLoop: boolean
+  rollingLoop: boolean
+  winnerLoop: boolean
+
   // 全局开关
   bgmEnabled: boolean
 
@@ -29,6 +34,7 @@ interface BgmState {
   setRollingVolume: (volume: number) => void
   setWinnerVolume: (volume: number) => void
   setBgmEnabled: (enabled: boolean) => void
+  setLoop: (track: 'idle' | 'rolling' | 'winner', loop: boolean) => void
 }
 
 export const useBgmStore = create<BgmState>()(
@@ -40,6 +46,9 @@ export const useBgmStore = create<BgmState>()(
       idleVolume: 0.5,
       rollingVolume: 0.7,
       winnerVolume: 0.8,
+      idleLoop: true,
+      rollingLoop: true,
+      winnerLoop: false,
       bgmEnabled: true,
 
       setIdleBgm: (bgm) => set({ idleBgm: bgm }),
@@ -49,6 +58,7 @@ export const useBgmStore = create<BgmState>()(
       setRollingVolume: (volume) => set({ rollingVolume: volume }),
       setWinnerVolume: (volume) => set({ winnerVolume: volume }),
       setBgmEnabled: (enabled) => set({ bgmEnabled: enabled }),
+      setLoop: (track, loop) => set({ [`${track}Loop`]: loop } as Pick<BgmState, 'idleLoop'>),
     }),
     {
       name: 'lottery-bgm',

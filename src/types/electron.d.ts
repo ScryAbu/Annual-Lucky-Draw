@@ -1,7 +1,12 @@
 // Electron API 类型声明
 interface ElectronAPI {
-  listDisplays: () => Promise<Array<{ id: number; label: string }>>
+  listDisplays: () => Promise<Array<{ id: number; label: string; isOperator: boolean }>>
   presentOnDisplay: (id: number) => Promise<void>
+  openScreen: (id: number) => Promise<void>
+  closeScreen: () => Promise<void>
+  isScreenOpen: () => Promise<boolean>
+  sendScreenMessage: (msg: unknown) => void
+  onScreenMessage: (cb: (msg: unknown) => void) => () => void
   selectExcel: () => Promise<{
     path: string
     name: string

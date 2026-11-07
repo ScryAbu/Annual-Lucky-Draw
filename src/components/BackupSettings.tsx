@@ -5,12 +5,12 @@ export default function BackupSettings() {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const input = useRef<HTMLInputElement>(null)
-  return <section className="rounded-xl p-6 bg-black/10 space-y-4">
+  return <section className="ui-card p-6 space-y-4">
     <h3 className="text-lg font-semibold">保存与迁移活动</h3>
     <p>导出一个配置文件，包含名单、照片、奖项、中奖记录、外观和音乐。在另一台电脑导入即可继续使用。</p>
     <p className="text-sm">文件包含完整活动数据与高级设置，请妥善保管。导入会覆盖当前活动，建议先导出备份。</p>
     <div className="flex gap-4">
-      <button disabled={busy} className="px-4 py-2 rounded bg-indigo-600 text-white" onClick={async () => {
+      <button disabled={busy} className="ui-btn ui-btn-primary" onClick={async () => {
         setBusy(true)
         try {
           const data = await createBackup()
@@ -21,7 +21,7 @@ export default function BackupSettings() {
         } catch (error) { setMessage(`导出失败：${String(error)}`) }
         finally { setBusy(false) }
       }}>导出完整配置</button>
-      <button disabled={busy} className="px-4 py-2 rounded bg-indigo-600 text-white" onClick={() => input.current?.click()}>导入配置</button>
+      <button disabled={busy} className="ui-btn ui-btn-primary" onClick={() => input.current?.click()}>导入配置</button>
     </div>
     <input ref={input} type="file" accept=".json" hidden onChange={async e => {
       const file = e.target.files?.[0]; e.target.value = ''; if (!file) return

@@ -1,4 +1,5 @@
 import { Employee, DisplayOptions } from '../types'
+import type { PhotoSource } from './photoCache'
 
 export const DEFAULT_DISPLAY: DisplayOptions = {
   showId: true, showName: true, showDepartment: true, showPhoto: true,
@@ -36,7 +37,7 @@ export function paintEmployeeCard(
   employee: Employee,
   options: DisplayOptions,
   primaryColor: string,
-  photo?: HTMLImageElement
+  photo?: PhotoSource
 ) {
   if (typeof ctx.clearRect === 'function') ctx.clearRect(0, 0, 256, 256)
 

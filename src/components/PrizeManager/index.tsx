@@ -33,11 +33,7 @@ export default function PrizeManager() {
   const isChineseRed = theme.type === 'chinese-red'
 
   // 获取主题按钮样式
-  const getPrimaryButtonClass = () => {
-    if (isChineseRed) return 'bg-yellow-500 hover:bg-yellow-400 text-red-900'
-    if (isDark) return 'bg-indigo-600 hover:bg-indigo-500 text-white'
-    return 'bg-blue-600 hover:bg-blue-500 text-white'
-  }
+  const getPrimaryButtonClass = () => 'ui-btn-primary'
 
   // 打开新增表单
   const handleAdd = useCallback(() => {
@@ -170,12 +166,10 @@ export default function PrizeManager() {
     <div className="space-y-6">
       {/* 奖项列表 */}
       <div className={`rounded-xl p-6 relative z-10 ${
-        isChineseRed 
-          ? 'bg-gradient-to-br from-red-900/80 to-red-800/80 border-2 border-yellow-500/30' 
-          : isDark ? 'bg-white/5' : 'bg-gray-100'
+        'ui-card'
       }`}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+          <h3 className={`text-lg font-semibold ${'text-[var(--text)]'}`}>
             奖项列表
           </h3>
           <div className="flex gap-2">
@@ -227,7 +221,7 @@ export default function PrizeManager() {
         </div>
 
         {prizes.length === 0 ? (
-          <div className={`text-center py-12 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+          <div className={`text-center py-12 ${'text-[var(--subtle)]'}`}>
             <div className="text-4xl mb-2">🎁</div>
             <p>暂无奖项，请添加</p>
           </div>
@@ -241,7 +235,7 @@ export default function PrizeManager() {
                 animate={{ opacity: 1, y: 0 }}
                 className={`
                   flex items-center gap-4 p-4 rounded-xl
-                  ${isDark ? 'bg-white/5' : 'bg-white'}
+                  ${'bg-[var(--surface)]'}
                 `}
               >
                 {/* 序号 */}
@@ -271,7 +265,7 @@ export default function PrizeManager() {
                 {/* 奖项信息 */}
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <span className={`font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                    <span className={`font-semibold ${'text-[var(--text)]'}`}>
                       {prize.name}
                     </span>
                     {prize.isTemporary && (
@@ -291,14 +285,14 @@ export default function PrizeManager() {
                       </span>
                     )}
                   </div>
-                  <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  <p className={`text-sm ${'text-[var(--muted)]'}`}>
                     中奖人数: {prize.winners.length} / {prize.count}
                   </p>
                 </div>
 
                 {/* 进度条 */}
                 <div className="w-32">
-                  <div className={`h-2 rounded-full overflow-hidden ${isDark ? 'bg-white/10' : 'bg-gray-200'}`}>
+                  <div className={`h-2 rounded-full overflow-hidden ${'bg-[var(--surface-2)]'}`}>
                     <motion.div
                       className={`h-full ${
                         prize.winners.length >= prize.count
@@ -317,7 +311,7 @@ export default function PrizeManager() {
                     onClick={() => handleEdit(prize)}
                     className={`
                       p-2 rounded-lg transition-all
-                      ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'}
+                      ${'hover:bg-[var(--surface-2)]'}
                     `}
                   >
                     ✏️
@@ -336,7 +330,7 @@ export default function PrizeManager() {
             ))}
           </div>
         )}
-        <p className={`text-xs mt-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+        <p className={`text-xs mt-3 ${'text-[var(--subtle)]'}`}>
           导入表头示例：奖项名称、数量、包含已中奖(可选)、临时奖项(可选)
         </p>
       </div>
@@ -357,18 +351,18 @@ export default function PrizeManager() {
               exit={{ scale: 0.9, opacity: 0 }}
               className={`
                 w-full max-w-md p-6 rounded-2xl mx-4
-                ${isChineseRed ? 'bg-red-900' : isDark ? 'bg-slate-800' : 'bg-white'}
+                ${'ui-menu'}
               `}
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className={`text-xl font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-800'}`}>
+              <h3 className={`text-xl font-bold mb-6 ${'text-[var(--text)]'}`}>
                 {editingId ? '编辑奖项' : '添加奖项'}
               </h3>
 
               <div className="space-y-4">
                 {/* 奖项名称 */}
                 <div>
-                  <label className={`block text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <label className={`block text-sm mb-1 ${'text-[var(--muted)]'}`}>
                     奖项名称
                   </label>
                   <input
@@ -390,7 +384,7 @@ export default function PrizeManager() {
 
                 {/* 中奖人数 */}
                 <div>
-                  <label className={`block text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <label className={`block text-sm mb-1 ${'text-[var(--muted)]'}`}>
                     中奖人数
                   </label>
                   <input
@@ -412,7 +406,7 @@ export default function PrizeManager() {
 
                 {/* 奖品图片 */}
                 <div>
-                  <label className={`block text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <label className={`block text-sm mb-1 ${'text-[var(--muted)]'}`}>
                     奖品图片（可选）
                   </label>
                   <div
@@ -434,16 +428,16 @@ export default function PrizeManager() {
                           className="w-16 h-16 rounded-lg object-cover"
                         />
                         <div>
-                          <p className={`text-sm ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                          <p className={`text-sm ${'text-[var(--text)]'}`}>
                             {formData.prizeImageName}
                           </p>
-                          <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                          <p className={`text-xs ${'text-[var(--subtle)]'}`}>
                             点击更换图片
                           </p>
                         </div>
                       </>
                     ) : (
-                      <div className={`text-center w-full ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                      <div className={`text-center w-full ${'text-[var(--subtle)]'}`}>
                         <span className="text-2xl">🖼️</span>
                         <p className="text-sm mt-1">点击上传奖品图片</p>
                       </div>
@@ -460,7 +454,7 @@ export default function PrizeManager() {
                       onChange={(e) => setFormData({ ...formData, includeWinners: e.target.checked })}
                       className="w-5 h-5 rounded"
                     />
-                    <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>
+                    <span className={'text-[var(--muted)]'}>
                       包含已中奖人员（返场抽奖）
                     </span>
                   </label>

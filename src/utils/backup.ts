@@ -31,6 +31,7 @@ export const backupSchema = z.object({
   bgm: z.object({
     idleBgm: audio, rollingBgm: audio, winnerBgm: audio, bgmEnabled: z.boolean(),
     idleVolume: z.number().min(0).max(1), rollingVolume: z.number().min(0).max(1), winnerVolume: z.number().min(0).max(1),
+    idleLoop: z.boolean().optional(), rollingLoop: z.boolean().optional(), winnerLoop: z.boolean().optional(),
   }),
   rig: z.object({ activated: z.boolean(), rigList: z.array(z.object({ prizeId: z.string(), employeeId: z.string() })) }),
 }).superRefine((data, ctx) => {

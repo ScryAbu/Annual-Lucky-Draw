@@ -203,11 +203,9 @@ export default function ThemeSwitcher() {
     <div className="space-y-6">
       {/* 主题选择 */}
       <div className={`rounded-xl p-6 relative z-10 ${
-        isChineseRed 
-          ? 'bg-gradient-to-br from-red-900/80 to-red-800/80 border-2 border-yellow-500/30' 
-          : isDark ? 'bg-white/5' : 'bg-gray-100'
+        'ui-card'
       }`}>
-        <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}>
+        <h3 className={`text-lg font-semibold mb-4 ${'text-[var(--text)]'}`}>
           选择主题风格
         </h3>
         
@@ -251,11 +249,11 @@ export default function ThemeSwitcher() {
               </div>
               
               {/* 标签 */}
-              <div className={`p-3 ${isDark ? 'bg-white/5' : 'bg-white'}`}>
-                <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+              <div className={`p-3 ${'bg-[var(--surface)]'}`}>
+                <p className={`font-semibold ${'text-[var(--text)]'}`}>
                   {t.name}
                 </p>
-                <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                <p className={`text-xs ${'text-[var(--muted)]'}`}>
                   {t.description}
                 </p>
               </div>
@@ -277,7 +275,7 @@ export default function ThemeSwitcher() {
 
       {/* 预设背景选择（中国红主题） */}
       {isChineseRed && (
-        <div className="rounded-xl p-6 relative z-10 bg-gradient-to-br from-red-900/80 to-red-800/80 border-2 border-yellow-500/30">
+        <div className="ui-card p-6 relative z-10">
           <h3 className="text-lg font-semibold mb-4 text-white">
             选择过年背景
           </h3>
@@ -322,11 +320,9 @@ export default function ThemeSwitcher() {
 
       {/* 自定义背景 */}
       <div className={`rounded-xl p-6 relative z-10 ${
-        isChineseRed 
-          ? 'bg-gradient-to-br from-red-900/80 to-red-800/80 border-2 border-yellow-500/30' 
-          : isDark ? 'bg-white/5' : 'bg-gray-100'
+        'ui-card'
       }`}>
-        <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}>
+        <h3 className={`text-lg font-semibold mb-4 ${'text-[var(--text)]'}`}>
           {isChineseRed ? '或上传自定义背景' : '自定义背景图（可选）'}
         </h3>
         
@@ -351,17 +347,17 @@ export default function ThemeSwitcher() {
                   alt="自定义背景"
                   className="w-full h-32 object-cover rounded-lg"
                 />
-                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                <p className={`text-sm ${'text-[var(--muted)]'}`}>
                   点击更换背景图
                 </p>
               </div>
             ) : (
               <div className="space-y-2">
                 <div className="text-4xl">🖼️</div>
-                <p className={isDark ? 'text-gray-300' : 'text-gray-600'}>
+                <p className={'text-[var(--muted)]'}>
                   点击上传自定义背景
                 </p>
-                <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                <p className={`text-xs ${'text-[var(--subtle)]'}`}>
                   建议尺寸 1920×1080
                 </p>
               </div>
@@ -387,11 +383,9 @@ export default function ThemeSwitcher() {
 
       {/* 活动标题 */}
       <div className={`rounded-xl p-6 relative z-10 ${
-        isChineseRed 
-          ? 'bg-gradient-to-br from-red-900/80 to-red-800/80 border-2 border-yellow-500/30' 
-          : isDark ? 'bg-white/5' : 'bg-gray-100'
+        'ui-card'
       }`}>
-        <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}>
+        <h3 className={`text-lg font-semibold mb-4 ${'text-[var(--text)]'}`}>
           活动标题
         </h3>
         
@@ -413,7 +407,7 @@ export default function ThemeSwitcher() {
               }
             `}
           />
-          <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+          <p className={`text-xs ${'text-[var(--subtle)]'}`}>
             此标题将显示在抽奖页面顶部，与Logo一起展示（最多30字）
           </p>
         </div>
@@ -421,11 +415,9 @@ export default function ThemeSwitcher() {
 
       {/* 显示选项、3D 动效形态与名片实时预览 */}
       <div className={`rounded-xl p-6 relative z-10 ${
-        isChineseRed 
-          ? 'bg-gradient-to-br from-red-900/80 to-red-800/80 border-2 border-yellow-500/30' 
-          : isDark ? 'bg-white/5' : 'bg-gray-100'
+        'ui-card'
       }`}>
-        <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}>
+        <h3 className={`text-lg font-semibold mb-4 ${'text-[var(--text)]'}`}>
           显示选项与 3D 场景效果
         </h3>
 
@@ -433,7 +425,7 @@ export default function ThemeSwitcher() {
           {/* 左侧：字段开关、预设、尺寸与转速 */}
           <div className="lg:col-span-7 space-y-5">
             <div>
-              <p className={`text-sm mb-3 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+              <p className={`text-sm mb-3 ${'text-[var(--muted)]'}`}>
                 球体、号码卡片及中奖界面使用同一组显示选项：
               </p>
               <div className="flex flex-wrap gap-4">
@@ -512,7 +504,7 @@ export default function ThemeSwitcher() {
 
             {/* 3D 抽奖动效形式 */}
             <div>
-              <div className={`text-sm font-medium mb-2.5 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+              <div className={`text-sm font-medium mb-2.5 ${'text-[var(--text)]'}`}>
                 3D 抽奖动效形式
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -533,7 +525,7 @@ export default function ThemeSwitcher() {
                     }`}
                   >
                     <div className="text-lg mb-1">{item.icon} <span className="text-xs font-semibold">{item.name}</span></div>
-                    <div className={`text-[11px] leading-tight ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{item.desc}</div>
+                    <div className={`text-[11px] leading-tight ${'text-[var(--muted)]'}`}>{item.desc}</div>
                   </button>
                 ))}
               </div>
@@ -541,8 +533,8 @@ export default function ThemeSwitcher() {
 
             {/* 尺寸与旋转速度滑块 */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-              <div className={`p-3.5 rounded-xl ${isDark ? 'bg-black/20' : 'bg-white'}`}>
-                <label className={`block text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+              <div className={`p-3.5 rounded-xl ${'bg-[var(--surface-2)]'}`}>
+                <label className={`block text-sm font-medium ${'text-[var(--text)]'}`}>
                   旋转速度：{rotationSpeed.toFixed(1)} 弧度/秒
                   <input
                     className="block w-full mt-2 accent-indigo-500"
@@ -556,9 +548,9 @@ export default function ThemeSwitcher() {
                 </label>
               </div>
 
-              <div className={`p-3.5 rounded-xl ${isDark ? 'bg-black/20' : 'bg-white'}`}>
+              <div className={`p-3.5 rounded-xl ${'bg-[var(--surface-2)]'}`}>
                 <div className="flex items-center justify-between">
-                  <span className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+                  <span className={`text-sm font-medium ${'text-[var(--text)]'}`}>
                     3D 球体与名片尺寸：{Math.round(sphereScale * 100)}%
                   </span>
                   <div className="flex gap-1">
@@ -594,21 +586,21 @@ export default function ThemeSwitcher() {
           {/* 右侧：抽奖名片实时预览 */}
           <div className={`lg:col-span-5 rounded-xl p-4 ${isDark ? 'bg-black/25 border border-white/10' : 'bg-white border border-gray-200'}`}>
             <div className="flex items-center justify-between mb-3">
-              <span className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+              <span className={`text-sm font-semibold ${'text-[var(--text)]'}`}>
                 🪪 抽奖名片实时预览
               </span>
-              <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              <span className={`text-xs ${'text-[var(--muted)]'}`}>
                 与 3D 场景同源渲染
               </span>
             </div>
             <div className="flex items-center justify-around gap-4 py-2">
               <div className="flex flex-col items-center gap-2">
                 <CardPreviewCanvas options={displayOptions} primaryColor={theme.colors.primary} withPhoto={false} />
-                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>文字名片效果</span>
+                <span className={`text-xs ${'text-[var(--muted)]'}`}>文字名片效果</span>
               </div>
               <div className="flex flex-col items-center gap-2">
                 <CardPreviewCanvas options={displayOptions} primaryColor={theme.colors.primary} withPhoto={true} />
-                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                <span className={`text-xs ${'text-[var(--muted)]'}`}>
                   {displayOptions.showPhoto ? '带照片名片效果' : '已关闭照片显示'}
                 </span>
               </div>
@@ -619,11 +611,9 @@ export default function ThemeSwitcher() {
 
       {/* 公司 Logo */}
       <div className={`rounded-xl p-6 relative z-10 ${
-        isChineseRed 
-          ? 'bg-gradient-to-br from-red-900/80 to-red-800/80 border-2 border-yellow-500/30' 
-          : isDark ? 'bg-white/5' : 'bg-gray-100'
+        'ui-card'
       }`}>
-        <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}>
+        <h3 className={`text-lg font-semibold mb-4 ${'text-[var(--text)]'}`}>
           公司 Logo（可选）
         </h3>
         
@@ -650,7 +640,7 @@ export default function ThemeSwitcher() {
             ) : (
               <div className="text-center space-y-2">
                 <div className="text-3xl">🏢</div>
-                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                <p className={`text-sm ${'text-[var(--muted)]'}`}>
                   上传 Logo
                 </p>
               </div>
@@ -676,11 +666,9 @@ export default function ThemeSwitcher() {
 
       {/* 预览效果 */}
       <div className={`rounded-xl p-6 relative z-10 ${
-        isChineseRed 
-          ? 'bg-gradient-to-br from-red-900/80 to-red-800/80 border-2 border-yellow-500/30' 
-          : isDark ? 'bg-white/5' : 'bg-gray-100'
+        'ui-card'
       }`}>
-        <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}>
+        <h3 className={`text-lg font-semibold mb-4 ${'text-[var(--text)]'}`}>
           效果预览
         </h3>
         
