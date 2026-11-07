@@ -2,8 +2,18 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 // 定义暴露给渲染进程的 API
 const electronAPI = {
-  listDisplays: (): Promise<Array<{ id: number; label: string }>> => ipcRenderer.invoke('list-displays'),
+  listDisplays: (): Promise<Array<{ id: number; label: string; isOperator: boolean }>> => ipcRenderer.invoke('list-displays'),
   presentOnDisplay: (id: number): Promise<void> => ipcRenderer.invoke('present-on-display', id),
+  // 大屏窗口：只显示抽奖画面，控制台留在本机
+  openScreen: (id: number): Promise<void> => ipcRenderer.invoke('screen-open', id),
+  closeScreen: (): Promise<void> => ipcRenderer.invoke('screen-close'),
+  isScreenOpen: (): Promise<boolean> => ipcRenderer.invoke('screen-is-open'),
+  sendScreenMessage: (msg: unknown) => ipcRenderer.send('screen-relay', msg),
+  onScreenMessage: (cb: (msg: unknown) => void) => {
+    const listener = (_event: unknown, msg: unknown) => cb(msg)
+    ipcRenderer.on('screen-msg', listener)
+    return () => { ipcRenderer.removeListener('screen-msg', listener) }
+  },
   // 选择 Excel 文件
   selectExcel: (): Promise<{
     path: string

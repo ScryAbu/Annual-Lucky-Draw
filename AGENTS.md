@@ -5,6 +5,8 @@
 - src/3d/LotterySphere.tsx 负责卡片与旋转；抽奖结果由 hooks 与 utils/commitWinners.ts 生成并保存，渲染层不得再次抽取。
 - 人员 id 是持久身份及抽奖号码，不使用渲染下标；同名允许，重复 id 拒绝。
 - 场景、中奖弹窗及两种附加模式共用 themeStore.displayOptions。
+- 投大屏：常规抽奖页在所选显示器另开无边框全屏窗口（路由 `#/screen`，ScreenPage）。抽取只在控制台窗口进行，经 utils/screenLink.ts（Electron IPC 转发 / 网页版 BroadcastChannel）把 ScreenState 推给大屏；大屏按键转发回控制台。观众画面统一由 components/LotteryStage.tsx 渲染。双窗口回归：tests/electron-screen-check.mjs。
+- 背景音乐每次进入阶段都从头播放（hooks/useBGM.ts），循环与否由 bgmStore 的 *Loop 决定；场景照片经 utils/photoCache.ts 解码缓存并在换页前预载，避免整屏闪纯色底卡。
 - 常规权重与终极大奖积分是不同配置；常规权重与内定设置使用隐蔽入口触发，抽奖大屏不展示概率或内定提示。
 - 抽奖中冻结人员池与规则；人员和奖项结果必须在同一个 IndexedDB 事务中保存。
 - 照片解码完成前保留文字卡片；纹理在所属卡片卸载时释放，异步回调不得更新已卸载卡片。

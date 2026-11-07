@@ -7,6 +7,7 @@ import { FieldMapping, DEFAULT_FIELD_MAPPING, Employee } from '../../types'
 import { assignMissingIds } from '../../utils/participants'
 import * as XLSX from 'xlsx'
 import ImageCropper from '../ImageCropper'
+import { compressImage } from '../../utils/imageLoader'
 
 interface ImportStats {
   total: number
@@ -43,11 +44,7 @@ export default function DataImport() {
   const isChineseRed = theme.type === 'chinese-red'
 
   // 获取主题按钮样式
-  const getPrimaryButtonClass = () => {
-    if (isChineseRed) return 'bg-yellow-500 hover:bg-yellow-400 text-red-900'
-    if (isDark) return 'bg-indigo-600 hover:bg-indigo-500 text-white'
-    return 'bg-blue-600 hover:bg-blue-500 text-white'
-  }
+  const getPrimaryButtonClass = () => 'ui-btn-primary'
 
   // 下载 Excel 模板
   const handleDownloadTemplate = useCallback(() => {
@@ -135,8 +132,15 @@ export default function DataImport() {
       const folder = await window.electronAPI.selectPhotosFolder()
       if (folder) {
         setPhotosFolder(folder)
-        const photoList = await window.electronAPI.readPhotos(folder)
-        
+        const rawList = await window.electronAPI.readPhotos(folder)
+        // 原片常有数 MB：统一压到 480px 宽，导入、存储与抽奖大屏解码都快很多
+        const photoList: typeof rawList = []
+        for (let i = 0; i < rawList.length; i += 8) {
+          photoList.push(...await Promise.all(rawList.slice(i, i + 8).map(async p => (
+            p.data.length > 160_000 ? { ...p, data: await compressImage(p.data, 480, 0.86) } : p
+          ))))
+        }
+
         const photoMap = new Map<string, string>()
         photoList.forEach((p) => {
           photoMap.set(p.name.toLowerCase(), p.data)
@@ -350,12 +354,10 @@ export default function DataImport() {
     <div className="space-y-6">
       {/* Excel 导入区 */}
       <div className={`rounded-xl p-6 relative z-10 ${
-        isChineseRed 
-          ? 'bg-gradient-to-br from-red-900/80 to-red-800/80 border-2 border-yellow-500/30' 
-          : isDark ? 'bg-white/5' : 'bg-gray-100'
+        'ui-card'
       }`}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+          <h3 className={`text-lg font-semibold ${'text-[var(--text)]'}`}>
             第一步：选择 Excel 名单
           </h3>
           <button
@@ -390,15 +392,15 @@ export default function DataImport() {
           {excelFile ? (
             <div className="space-y-2">
               <div className="text-4xl">📊</div>
-              <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-800'}`}>{excelFile}</p>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              <p className={`font-medium ${'text-[var(--text)]'}`}>{excelFile}</p>
+              <p className={`text-sm ${'text-[var(--muted)]'}`}>
                 共 {excelData.length} 条数据，点击重新选择
               </p>
             </div>
           ) : (
             <div className="space-y-2">
               <div className="text-4xl">📁</div>
-              <p className={isDark ? 'text-gray-300' : 'text-gray-600'}>
+              <p className={'text-[var(--muted)]'}>
                 点击选择 Excel 文件（.xlsx / .xls）
               </p>
             </div>
@@ -416,7 +418,7 @@ export default function DataImport() {
             >
               {Object.entries(DEFAULT_FIELD_MAPPING).map(([key, label]) => (
                 <div key={key}>
-                  <label className={`block text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{label}</label>
+                  <label className={`block text-sm mb-1 ${'text-[var(--muted)]'}`}>{label}</label>
                   <select
                     value={fieldMapping[key as keyof FieldMapping]}
                     onChange={(e) => setFieldMapping({ ...fieldMapping, [key]: e.target.value })}
@@ -442,14 +444,12 @@ export default function DataImport() {
 
       {/* 照片导入区 */}
       <div className={`rounded-xl p-6 relative z-10 ${
-        isChineseRed 
-          ? 'bg-gradient-to-br from-red-900/80 to-red-800/80 border-2 border-yellow-500/30' 
-          : isDark ? 'bg-white/5' : 'bg-gray-100'
+        'ui-card'
       }`}>
-        <h3 className={`text-lg font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-800'}`}>
+        <h3 className={`text-lg font-semibold mb-2 ${'text-[var(--text)]'}`}>
           第二步：选择照片文件夹
         </h3>
-        <p className={`text-sm mb-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+        <p className={`text-sm mb-4 ${'text-[var(--muted)]'}`}>
           将员工照片放在一个文件夹中，照片文件名需与 Excel 中的「照片文件名」列一致
         </p>
         
@@ -469,23 +469,23 @@ export default function DataImport() {
           {isLoading ? (
             <div className="space-y-2">
               <div className="animate-spin text-4xl">⏳</div>
-              <p className={isDark ? 'text-gray-300' : 'text-gray-600'}>正在读取照片...</p>
+              <p className={'text-[var(--muted)]'}>正在读取照片...</p>
             </div>
           ) : photosFolder ? (
             <div className="space-y-2">
               <div className="text-4xl">✅</div>
-              <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-800'}`}>
+              <p className={`font-medium ${'text-[var(--text)]'}`}>
                 已加载 {Math.floor(photos.size / 2)} 张照片
               </p>
-              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              <p className={`text-xs ${'text-[var(--muted)]'}`}>
                 点击重新选择文件夹
               </p>
             </div>
           ) : (
             <div className="space-y-2">
               <div className="text-4xl">📁</div>
-              <p className={isDark ? 'text-gray-300' : 'text-gray-600'}>点击选择照片所在文件夹</p>
-              <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+              <p className={'text-[var(--muted)]'}>点击选择照片所在文件夹</p>
+              <p className={`text-xs ${'text-[var(--subtle)]'}`}>
                 支持 jpg/png/gif/webp 格式 · 可选步骤
               </p>
             </div>
@@ -494,10 +494,10 @@ export default function DataImport() {
 
         {/* 匹配说明 */}
         <div className={`mt-3 p-3 rounded-lg text-xs ${isDark ? 'bg-white/5' : 'bg-gray-200/50'}`}>
-          <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+          <p className={'text-[var(--muted)]'}>
             💡 <strong>照片匹配规则：</strong>按以下顺序尝试匹配：
           </p>
-          <p className={`mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+          <p className={`mt-1 ${'text-[var(--subtle)]'}`}>
             1. Excel中的「照片文件名」→ 2. 工号 → 3. 姓名
           </p>
         </div>
@@ -505,8 +505,8 @@ export default function DataImport() {
 
       {/* 导入按钮 */}
       {excelData.length > 0 && (
-        <div className={`rounded-xl p-4 ${isDark ? 'bg-white/5' : 'bg-gray-100'}`}>
-          <p className={`text-sm mb-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <div className={`rounded-xl p-4 ${'bg-[var(--surface-2)]'}`}>
+          <p className={`text-sm mb-3 ${'text-[var(--muted)]'}`}>
             第三步：选择导入方式（共 {excelData.length} 条数据）
           </p>
           <div className="flex gap-3">
@@ -581,12 +581,10 @@ export default function DataImport() {
 
       {/* 当前数据管理 */}
       <div className={`rounded-xl p-6 relative z-10 ${
-        isChineseRed 
-          ? 'bg-gradient-to-br from-red-900/80 to-red-800/80 border-2 border-yellow-500/30' 
-          : isDark ? 'bg-white/5' : 'bg-gray-100'
+        'ui-card'
       }`}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+          <h3 className={`text-lg font-semibold ${'text-[var(--text)]'}`}>
             员工数据管理
           </h3>
           <div className="flex gap-2 flex-wrap justify-end">
@@ -627,7 +625,7 @@ export default function DataImport() {
         </div>
         
         {employees.length === 0 ? (
-          <div className={`text-center py-12 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+          <div className={`text-center py-12 ${'text-[var(--subtle)]'}`}>
             <div className="text-4xl mb-2">👥</div>
             <p>暂无员工数据</p>
             <p className="text-sm mt-1">可通过 Excel 导入或手动添加</p>
@@ -635,7 +633,7 @@ export default function DataImport() {
         ) : (
           <div className="max-h-80 overflow-auto rounded-lg">
             <table className="w-full text-sm">
-              <thead className={`sticky top-0 ${isChineseRed ? 'bg-red-900' : isDark ? 'bg-slate-800' : 'bg-gray-200'}`}>
+              <thead className={`sticky top-0 ${'bg-[var(--surface-solid)]'}`}>
                 <tr>
                   <th className="px-3 py-2 text-left">照片</th>
                   <th className="px-3 py-2 text-left">工号</th>
@@ -650,7 +648,7 @@ export default function DataImport() {
                 {employees.map((emp) => (
                   <tr 
                     key={emp.id} 
-                    className={`border-t ${isChineseRed ? 'border-yellow-500/20' : isDark ? 'border-white/10' : 'border-gray-200'}`}
+                    className={`border-t ${isChineseRed ? 'border-yellow-500/20' : 'border-[var(--border)]'}`}
                   >
                     <td className="px-3 py-2">
                       {emp.photoData ? (
@@ -684,7 +682,7 @@ export default function DataImport() {
           </div>
         )}
         
-        <p className={`text-sm mt-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+        <p className={`text-sm mt-4 ${'text-[var(--subtle)]'}`}>
           共 {employees.length} 人 · {employees.filter(e => e.isWinner).length} 人已中奖 · {employees.filter(e => !e.isWinner).length} 人可参与抽奖
         </p>
       </div>
@@ -703,16 +701,16 @@ export default function DataImport() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className={`w-full max-w-md p-6 rounded-2xl mx-4 max-h-[90vh] overflow-auto ${isChineseRed ? 'bg-red-900' : isDark ? 'bg-slate-800' : 'bg-white'}`}
+              className={`w-full max-w-md p-6 rounded-2xl mx-4 max-h-[90vh] overflow-auto ${'ui-menu'}`}
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className={`text-xl font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-800'}`}>
+              <h3 className={`text-xl font-bold mb-6 ${'text-[var(--text)]'}`}>
                 {editingEmployee ? '编辑员工' : '添加员工'}
               </h3>
 
               <div className="space-y-4">
                 <div>
-                  <label className={`block text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>工号 / 号码（可留空）</label>
+                  <label className={`block text-sm mb-1 ${'text-[var(--muted)]'}`}>工号 / 号码（可留空）</label>
                   <input
                     type="text"
                     value={employeeForm.id}
@@ -732,7 +730,7 @@ export default function DataImport() {
                 </div>
                 
                 <div>
-                  <label className={`block text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>姓名（号码抽奖可留空）</label>
+                  <label className={`block text-sm mb-1 ${'text-[var(--muted)]'}`}>姓名（号码抽奖可留空）</label>
                   <input
                     type="text"
                     value={employeeForm.name}
@@ -750,7 +748,7 @@ export default function DataImport() {
                 </div>
                 
                 <div>
-                  <label className={`block text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>部门</label>
+                  <label className={`block text-sm mb-1 ${'text-[var(--muted)]'}`}>部门</label>
                   <input
                     type="text"
                     value={employeeForm.department}
@@ -768,7 +766,7 @@ export default function DataImport() {
                 </div>
 
                 <div>
-                  <label className={`block text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>优先级系数（1–100，默认 1）</label>
+                  <label className={`block text-sm mb-1 ${'text-[var(--muted)]'}`}>优先级系数（1–100，默认 1）</label>
                   <input
                     type="number"
                     min="1"
@@ -787,7 +785,7 @@ export default function DataImport() {
                   />
                 </div>
                 <div>
-                  <label className={`block text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>积分（终极大奖权重）</label>
+                  <label className={`block text-sm mb-1 ${'text-[var(--muted)]'}`}>积分（终极大奖权重）</label>
                   <input
                     type="number"
                     min={0}
@@ -803,11 +801,11 @@ export default function DataImport() {
                       }
                     `}
                   />
-                  <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>积分越高，抽中终极大奖的概率越大</p>
+                  <p className={`text-xs mt-1 ${'text-[var(--subtle)]'}`}>积分越高，抽中终极大奖的概率越大</p>
                 </div>
 
                 <div>
-                  <label className={`block text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>照片（可选）</label>
+                  <label className={`block text-sm mb-1 ${'text-[var(--muted)]'}`}>照片（可选）</label>
                   <div 
                     onClick={handleSelectEmployeePhoto}
                     className={`
@@ -829,10 +827,10 @@ export default function DataImport() {
                       </div>
                     )}
                     <div>
-                      <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                      <p className={`font-medium ${'text-[var(--text)]'}`}>
                         {employeeForm.photoData ? '点击更换照片' : '点击上传照片'}
                       </p>
-                      <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                      <p className={`text-xs ${'text-[var(--subtle)]'}`}>
                         支持裁剪调整，自动压缩
                       </p>
                     </div>

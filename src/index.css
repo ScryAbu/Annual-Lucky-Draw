@@ -2,6 +2,82 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============ 设计令牌：三套主题共用一套组件样式 ============ */
+:root,
+[data-theme='tech-dark'] {
+  --bg: #090b14;
+  --bg-grad: radial-gradient(1200px 600px at 12% -10%, rgba(124, 108, 255, 0.16), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(34, 211, 238, 0.08), transparent 55%), #090b14;
+  --surface: rgba(255, 255, 255, 0.035);
+  --surface-2: rgba(255, 255, 255, 0.07);
+  --surface-solid: #141827;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text: #eef0f8;
+  --muted: #9aa0b6;
+  --subtle: #697089;
+  --accent: #7c6cff;
+  --accent-2: #a78bfa;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(124, 108, 255, 0.16);
+  --accent-text: #b4abff;
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.12);
+  --ok: #34d399;
+  --ring: rgba(124, 108, 255, 0.5);
+  --shadow: 0 18px 50px -20px rgba(0, 0, 0, 0.7);
+  color-scheme: dark;
+}
+
+[data-theme='minimal-light'] {
+  --bg: #f5f6fa;
+  --bg-grad: radial-gradient(1100px 520px at 10% -10%, rgba(79, 70, 229, 0.08), transparent 60%), #f5f6fa;
+  --surface: #ffffff;
+  --surface-2: #f1f2f7;
+  --surface-solid: #ffffff;
+  --border: #e5e7ef;
+  --border-strong: #cfd3df;
+  --text: #141826;
+  --muted: #5f6578;
+  --subtle: #8b90a1;
+  --accent: #4f46e5;
+  --accent-2: #6d5dfc;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(79, 70, 229, 0.1);
+  --accent-text: #4338ca;
+  --danger: #dc2626;
+  --danger-soft: rgba(220, 38, 38, 0.08);
+  --ok: #059669;
+  --ring: rgba(79, 70, 229, 0.35);
+  --shadow: 0 16px 40px -22px rgba(20, 24, 38, 0.35);
+  color-scheme: light;
+}
+
+[data-theme='chinese-red'] {
+  --bg: #4a0b10;
+  --bg-grad: radial-gradient(1000px 520px at 50% -12%, rgba(255, 196, 92, 0.18), transparent 60%),
+    linear-gradient(160deg, #6e1016 0%, #4a0b10 55%, #34070b 100%);
+  --surface: rgba(255, 228, 180, 0.05);
+  --surface-2: rgba(255, 228, 180, 0.1);
+  --surface-solid: #5a0e14;
+  --border: rgba(255, 210, 130, 0.16);
+  --border-strong: rgba(255, 210, 130, 0.32);
+  --text: #fff4e2;
+  --muted: #e9c39b;
+  --subtle: #b98e6c;
+  --accent: #f6c453;
+  --accent-2: #f0a43a;
+  --accent-ink: #4a0b10;
+  --accent-soft: rgba(246, 196, 83, 0.15);
+  --accent-text: #ffd77a;
+  --danger: #ffb4a8;
+  --danger-soft: rgba(255, 180, 168, 0.12);
+  --ok: #9be7b0;
+  --ring: rgba(246, 196, 83, 0.5);
+  --shadow: 0 18px 50px -20px rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -11,6 +87,8 @@
 html, body {
   width: 100%;
   height: 100%;
+  background: var(--bg);
+  color: var(--text);
 }
 
 #root {
@@ -19,15 +97,22 @@ html, body {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans SC', sans-serif;
+  font-family: 'HarmonyOS Sans SC', 'PingFang SC', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans SC', system-ui, -apple-system, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+.tabular { font-variant-numeric: tabular-nums; }
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
 /* 自定义滚动条 */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -35,12 +120,140 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.3);
-  border-radius: 3px;
+  background: var(--border-strong);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.5);
+  background: var(--subtle);
+  background-clip: padding-box;
+}
+
+/* ============ 通用组件 ============ */
+@layer components {
+  .ui-page {
+    background: var(--bg-grad);
+    color: var(--text);
+  }
+  .ui-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+  }
+  .ui-muted { color: var(--muted); }
+  .ui-subtle { color: var(--subtle); }
+  .ui-accent-text { color: var(--accent-text); }
+
+  .ui-btn {
+    @apply inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl text-sm font-medium whitespace-nowrap select-none;
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.1s, box-shadow 0.2s, opacity 0.15s, filter 0.15s;
+  }
+  .ui-btn:hover:not(:disabled) { border-color: var(--border-strong); }
+  .ui-btn:active:not(:disabled) { transform: translateY(1px); }
+  .ui-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .ui-btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: var(--accent-ink);
+    border-color: transparent;
+    box-shadow: 0 10px 26px -12px var(--accent);
+  }
+  .ui-btn-primary:hover:not(:disabled) { border-color: transparent; filter: brightness(1.07); }
+  .ui-btn-ghost { background: transparent; border-color: transparent; color: var(--muted); }
+  .ui-btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); border-color: transparent; }
+  .ui-btn-danger { background: var(--danger-soft); color: var(--danger); border-color: transparent; }
+  .ui-btn-icon { @apply w-10 px-0; }
+  .ui-btn-sm { @apply h-8 px-3 text-xs rounded-lg; }
+  .ui-btn-sm.ui-btn-icon { @apply w-8 px-0; }
+  .ui-btn-active { background: var(--accent-soft); color: var(--accent-text); border-color: transparent; }
+
+  .ui-input {
+    @apply w-full h-10 px-3 rounded-xl text-sm outline-none;
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .ui-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .ui-input::placeholder { color: var(--subtle); }
+
+  .ui-switch {
+    @apply relative inline-flex h-6 w-11 shrink-0 items-center rounded-full;
+    background: var(--border-strong);
+    transition: background-color 0.2s;
+  }
+  .ui-switch::after {
+    content: '';
+    @apply absolute left-0.5 h-5 w-5 rounded-full bg-white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s;
+  }
+  .ui-switch[aria-checked='true'] { background: var(--accent); }
+  .ui-switch[aria-checked='true']::after { transform: translateX(20px); }
+
+  .ui-range {
+    @apply w-full h-1.5 rounded-full appearance-none cursor-pointer;
+    background: linear-gradient(to right, var(--accent) var(--fill, 50%), var(--border-strong) var(--fill, 50%));
+  }
+  .ui-range::-webkit-slider-thumb {
+    @apply appearance-none w-4 h-4 rounded-full bg-white;
+    box-shadow: 0 0 0 4px var(--accent-soft), 0 1px 3px rgba(0, 0, 0, 0.35);
+  }
+
+  .ui-menu {
+    background: var(--surface-solid);
+    border: 1px solid var(--border-strong);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    color: var(--text);
+  }
+  .ui-chip {
+    @apply inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-xs font-medium;
+    background: var(--surface-2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .ui-kbd {
+    @apply inline-flex items-center justify-center min-w-[1.6rem] h-6 px-1.5 rounded-md text-[11px] font-semibold;
+    background: var(--surface-2);
+    border: 1px solid var(--border-strong);
+    border-bottom-width: 2px;
+    color: var(--text);
+  }
+
+  /* 抽奖大屏上的浮层：无论背景图是什么都保持可读 */
+  .stage-glass {
+    background: rgba(8, 10, 20, 0.42);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(16px) saturate(140%);
+    color: #fff;
+  }
+  [data-theme='minimal-light'] .stage-glass {
+    background: rgba(255, 255, 255, 0.66);
+    border-color: rgba(20, 24, 38, 0.08);
+    color: #141826;
+  }
+  [data-theme='chinese-red'] .stage-glass {
+    background: rgba(60, 6, 10, 0.45);
+    border-color: rgba(255, 210, 130, 0.22);
+    color: #fff4e2;
+  }
+}
+
+/* 闲置时自动隐藏操作控件（单屏 / 镜像投屏时，观众只看到抽奖画面） */
+.chrome-auto {
+  transition: opacity 0.45s ease;
+}
+.chrome-hidden .chrome-auto {
+  opacity: 0;
+  pointer-events: none;
+}
+.chrome-hidden {
+  cursor: none;
 }
 
 /* 拖拽区域样式 */

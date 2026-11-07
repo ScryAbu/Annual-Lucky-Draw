@@ -66,7 +66,7 @@ try {
   assert.equal(rolling.deleted, initial.deleted, 'Rolling must not repeatedly unmount cards')
   await page.screenshot({ path: `${evidence}/150-rolling.png` })
   await page.keyboard.press('Space')
-  await page.getByText('🎉 幸运嘉宾 🎉').waitFor()
+  await page.getByRole('heading', { name: '幸运嘉宾', exact: true }).waitFor()
   const result = await page.evaluate(async () => {
     const { useLotteryStore } = await import('/src/stores/lotteryStore.ts')
     const { db } = await import('/src/db/database.ts')
@@ -84,7 +84,7 @@ try {
   })
   await page.getByRole('button', { name: '开始', exact: true }).click()
   await page.getByRole('button', { name: '停止', exact: true }).click()
-  await page.getByText('🎉 幸运嘉宾 🎉').waitFor()
+  await page.getByRole('heading', { name: '幸运嘉宾', exact: true }).waitFor()
   await page.waitForTimeout(1000)
   await page.screenshot({ path: `${evidence}/numbers-only.png` })
   assert.equal(await page.locator('h3').filter({ hasText: /嘉宾\d/ }).count(), 0)

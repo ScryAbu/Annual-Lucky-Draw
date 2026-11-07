@@ -1,288 +1,271 @@
-import { useCallback } from 'react'
-import { motion } from 'framer-motion'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useBgmStore, BgmConfig } from '../../stores/bgmStore'
-import { useThemeStore } from '../../stores/themeStore'
+import { Icon, IconName } from '../ui/Icon'
 
-// 单个 BGM 配置卡片
+type Track = 'idle' | 'rolling' | 'winner'
+
+// 全局只保留一个试听播放器：点另一首会自动停掉上一首
+let previewAudio: HTMLAudioElement | null = null
+let previewOwner: Track | null = null
+const previewListeners = new Set<() => void>()
+const notifyPreview = () => previewListeners.forEach(fn => fn())
+
+function stopPreview() {
+  if (previewAudio) {
+    previewAudio.pause()
+    previewAudio.removeAttribute('src')
+    previewAudio.load()
+  }
+  previewAudio = null
+  previewOwner = null
+  notifyPreview()
+}
+
+function usePreview(track: Track, bgm: BgmConfig | null, volume: number) {
+  const [, force] = useState(0)
+  const [progress, setProgress] = useState(0)
+  const playing = previewOwner === track
+
+  useEffect(() => {
+    const fn = () => force(n => n + 1)
+    previewListeners.add(fn)
+    return () => { previewListeners.delete(fn) }
+  }, [])
+
+  // 试听时拖动音量立即生效
+  useEffect(() => { if (playing && previewAudio) previewAudio.volume = volume }, [playing, volume])
+
+  // 进度条
+  useEffect(() => {
+    if (!playing) { setProgress(0); return }
+    let raf = 0
+    const tick = () => {
+      const a = previewAudio
+      if (a && a.duration > 0) setProgress(a.currentTime / a.duration)
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [playing])
+
+  // 移除或更换音乐时停止试听
+  useEffect(() => { if (previewOwner === track) stopPreview() }, [bgm?.data, track])
+
+  const toggle = useCallback(() => {
+    if (previewOwner === track) { stopPreview(); return }
+    stopPreview()
+    if (!bgm) return
+    const audio = new Audio(bgm.data)
+    audio.volume = volume
+    audio.onended = () => { if (previewAudio === audio) stopPreview() }
+    previewAudio = audio
+    previewOwner = track
+    audio.play().catch(() => stopPreview())
+    notifyPreview()
+  }, [bgm, track, volume])
+
+  return { playing, progress, toggle }
+}
+
+function pickAudioInBrowser(): Promise<BgmConfig | null> {
+  return new Promise(resolve => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'audio/*'
+    input.onchange = () => {
+      const file = input.files?.[0]
+      if (!file) return resolve(null)
+      const reader = new FileReader()
+      reader.onload = () => resolve({ name: file.name, data: String(reader.result) })
+      reader.onerror = () => resolve(null)
+      reader.readAsDataURL(file)
+    }
+    input.click()
+  })
+}
+
 function BgmCard({
+  track,
+  icon,
   label,
   description,
   bgm,
   volume,
+  loop,
   onSelect,
   onRemove,
   onVolumeChange,
-  isDark,
-  isChineseRed,
+  onLoopChange,
 }: {
+  track: Track
+  icon: IconName
   label: string
   description: string
   bgm: BgmConfig | null
   volume: number
+  loop: boolean
   onSelect: () => void
   onRemove: () => void
   onVolumeChange: (v: number) => void
-  isDark: boolean
-  isChineseRed: boolean
+  onLoopChange: (v: boolean) => void
 }) {
-  // 试听
-  const handlePreview = useCallback(() => {
-    if (!bgm) return
-    const audio = new Audio(bgm.data)
-    audio.volume = volume
-    audio.play().catch(() => {})
-    // 5秒后自动停止
-    setTimeout(() => {
-      audio.pause()
-      audio.src = ''
-    }, 5000)
-  }, [bgm, volume])
+  const { playing, progress, toggle } = usePreview(track, bgm, volume)
 
   return (
-    <div
-      className={`
-        rounded-xl p-5 transition-all
-        ${isChineseRed
-          ? 'bg-red-950/50 border border-yellow-500/20'
-          : isDark ? 'bg-white/5 border border-white/10' : 'bg-white border border-gray-200'
-        }
-      `}
-    >
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>
-            {label}
-          </h4>
-          <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-            {description}
-          </p>
+    <div className="ui-card p-5 flex flex-col gap-4">
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--accent-soft)', color: 'var(--accent-text)' }}>
+          <Icon name={icon} size={20} />
         </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="font-semibold">{label}</h4>
+          <p className="text-xs ui-muted mt-0.5">{description}</p>
+        </div>
+        <label className="flex items-center gap-2 text-xs ui-muted cursor-pointer select-none" title="关闭后音乐播放一遍即停止">
+          <Icon name="repeat" size={14} />
+          循环
+          <button type="button" role="switch" aria-checked={loop} aria-label={`${label}循环播放`} className="ui-switch" onClick={() => onLoopChange(!loop)} />
+        </label>
       </div>
 
-      {/* 文件选择区 */}
-      <div className="flex items-center gap-3 mb-4">
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={onSelect}
-          className={`
-            flex-1 px-4 py-3 rounded-lg text-sm font-medium
-            border-2 border-dashed transition-all text-center
-            ${isChineseRed
-              ? 'border-yellow-500/30 hover:border-yellow-500 text-yellow-200'
-              : isDark
-                ? 'border-white/20 hover:border-indigo-500 text-gray-300'
-                : 'border-gray-300 hover:border-blue-500 text-gray-600'
-            }
-          `}
-        >
-          {bgm ? (
-            <span className="flex items-center justify-center gap-2">
-              <span>🎵</span>
-              <span className="truncate max-w-[200px]">{bgm.name}</span>
-            </span>
-          ) : (
-            <span>点击选择音频文件</span>
-          )}
-        </motion.button>
-
-        {bgm && (
-          <div className="flex gap-2">
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={handlePreview}
-              className={`
-                w-9 h-9 rounded-lg flex items-center justify-center text-lg
-                ${isChineseRed
-                  ? 'bg-yellow-500/20 hover:bg-yellow-500/30'
-                  : isDark ? 'bg-white/10 hover:bg-white/20' : 'bg-gray-100 hover:bg-gray-200'
-                }
-              `}
-              title="试听"
-            >
-              ▶
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={onRemove}
-              className={`
-                w-9 h-9 rounded-lg flex items-center justify-center text-lg
-                ${isDark
-                  ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                  : 'bg-red-100 text-red-500 hover:bg-red-200'
-                }
-              `}
-              title="移除"
-            >
-              ✕
-            </motion.button>
+      {bgm ? (
+        <div className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: 'var(--surface-2)' }}>
+          <button
+            type="button"
+            onClick={toggle}
+            className={`ui-btn ui-btn-icon ui-btn-sm rounded-full ${playing ? 'ui-btn-primary' : ''}`}
+            title={playing ? '停止试听' : '试听'}
+            aria-label={playing ? '停止试听' : '试听'}
+          >
+            <Icon name={playing ? 'stop' : 'play'} size={14} />
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm truncate" title={bgm.name}>{bgm.name}</div>
+            <div className="mt-1.5 h-1 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
+              <div className="h-full rounded-full" style={{ width: `${progress * 100}%`, background: 'var(--accent)', transition: playing ? 'none' : 'width .2s' }} />
+            </div>
           </div>
-        )}
-      </div>
+          <button type="button" onClick={onSelect} className="ui-btn ui-btn-ghost ui-btn-sm">更换</button>
+          <button type="button" onClick={onRemove} className="ui-btn ui-btn-ghost ui-btn-sm ui-btn-icon" title="移除" aria-label="移除音乐">
+            <Icon name="trash" size={15} />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={onSelect}
+          className="w-full rounded-xl py-4 text-sm ui-muted border border-dashed transition-colors hover:border-[var(--accent)] hover:text-[var(--text)] flex items-center justify-center gap-2"
+          style={{ borderColor: 'var(--border-strong)' }}
+        >
+          <Icon name="upload" size={16} />
+          选择音频文件
+        </button>
+      )}
 
-      {/* 音量调节 */}
       <div className="flex items-center gap-3">
-        <span className={`text-xs whitespace-nowrap ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-          🔈 音量
-        </span>
+        <Icon name="volume" size={16} className="ui-subtle" />
         <input
           type="range"
           min="0"
           max="100"
           value={Math.round(volume * 100)}
           onChange={(e) => onVolumeChange(parseInt(e.target.value) / 100)}
-          className={`
-            flex-1 h-2 rounded-full appearance-none cursor-pointer
-            ${isChineseRed
-              ? '[&::-webkit-slider-thumb]:bg-yellow-500'
-              : isDark
-                ? '[&::-webkit-slider-thumb]:bg-indigo-500'
-                : '[&::-webkit-slider-thumb]:bg-blue-500'
-            }
-            ${isDark ? 'bg-white/20' : 'bg-gray-200'}
-            [&::-webkit-slider-thumb]:appearance-none
-            [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
-            [&::-webkit-slider-thumb]:rounded-full
-          `}
+          className="ui-range flex-1"
+          style={{ ['--fill' as string]: `${Math.round(volume * 100)}%` }}
+          aria-label={`${label}音量`}
         />
-        <span className={`text-xs w-10 text-right ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-          {Math.round(volume * 100)}%
-        </span>
+        <span className="text-xs w-10 text-right ui-muted tabular">{Math.round(volume * 100)}%</span>
       </div>
     </div>
   )
 }
 
 export default function BgmSettings() {
+  const store = useBgmStore()
   const {
     idleBgm, rollingBgm, winnerBgm,
     idleVolume, rollingVolume, winnerVolume,
+    idleLoop, rollingLoop, winnerLoop,
     bgmEnabled,
     setIdleBgm, setRollingBgm, setWinnerBgm,
     setIdleVolume, setRollingVolume, setWinnerVolume,
-    setBgmEnabled,
-  } = useBgmStore()
-  
-  const { theme } = useThemeStore()
-  const isDark = theme.type !== 'minimal-light'
-  const isChineseRed = theme.type === 'chinese-red'
+    setBgmEnabled, setLoop,
+  } = store
+  const mounted = useRef(true)
 
-  // 选择音频文件
+  // 离开设置页时停止试听
+  useEffect(() => () => { mounted.current = false; stopPreview() }, [])
+
   const handleSelectAudio = useCallback(async (setter: (bgm: BgmConfig | null) => void) => {
-    const result = await window.electronAPI.selectAudio()
-    if (result) {
-      setter({ name: result.name, data: result.data })
-    }
+    const result = window.electronAPI?.selectAudio ? await window.electronAPI.selectAudio() : await pickAudioInBrowser()
+    if (result && mounted.current) setter({ name: result.name, data: result.data })
   }, [])
 
   return (
-    <div className="space-y-6">
-      {/* 全局开关 */}
-      <div className={`rounded-xl p-6 relative z-10 ${
-        isChineseRed
-          ? 'bg-gradient-to-br from-red-900/80 to-red-800/80 border-2 border-yellow-500/30'
-          : isDark ? 'bg-white/5' : 'bg-gray-100'
-      }`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>
-              背景音乐
-            </h3>
-            <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              为抽奖过程的不同阶段设置背景音乐，支持 MP3、WAV、OGG 等格式
-            </p>
-          </div>
-          
-          {/* 开关 */}
-          <button
-            onClick={() => setBgmEnabled(!bgmEnabled)}
-            className={`
-              relative w-14 h-7 rounded-full transition-colors duration-300
-              ${bgmEnabled
-                ? isChineseRed ? 'bg-yellow-500' : 'bg-indigo-500'
-                : isDark ? 'bg-white/20' : 'bg-gray-300'
-              }
-            `}
-          >
-            <div
-              className={`
-                absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md
-                transition-transform duration-300
-                ${bgmEnabled ? 'translate-x-7' : 'translate-x-0.5'}
-              `}
-            />
-          </button>
+    <div className="space-y-5">
+      <div className="ui-card p-6 flex items-center justify-between gap-6">
+        <div>
+          <h3 className="text-lg font-semibold">背景音乐</h3>
+          <p className="text-sm ui-muted mt-1">
+            为待机、抽奖、中奖三个阶段分别配乐。每次进入某个阶段，对应音乐都会<strong className="font-semibold" style={{ color: 'var(--text)' }}>从头播放</strong>。
+          </p>
         </div>
+        <button type="button" role="switch" aria-checked={bgmEnabled} aria-label="启用背景音乐" className="ui-switch" onClick={() => setBgmEnabled(!bgmEnabled)} />
       </div>
 
-      {/* BGM 配置卡片 */}
       {bgmEnabled && (
-        <div className={`rounded-xl p-6 relative z-10 ${
-          isChineseRed
-            ? 'bg-gradient-to-br from-red-900/80 to-red-800/80 border-2 border-yellow-500/30'
-            : isDark ? 'bg-white/5' : 'bg-gray-100'
-        }`}>
-          <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}>
-            音乐配置
-          </h3>
-          
-          <div className="space-y-4">
-            <BgmCard
-              label="🎶 待机音乐"
-              description="进入抽奖页面后循环播放的背景音乐"
-              bgm={idleBgm}
-              volume={idleVolume}
-              onSelect={() => handleSelectAudio(setIdleBgm)}
-              onRemove={() => setIdleBgm(null)}
-              onVolumeChange={setIdleVolume}
-              isDark={isDark}
-              isChineseRed={isChineseRed}
-            />
-
-            <BgmCard
-              label="🥁 抽奖音乐"
-              description="点击开始按钮后，滚动抽取过程中播放的音乐"
-              bgm={rollingBgm}
-              volume={rollingVolume}
-              onSelect={() => handleSelectAudio(setRollingBgm)}
-              onRemove={() => setRollingBgm(null)}
-              onVolumeChange={setRollingVolume}
-              isDark={isDark}
-              isChineseRed={isChineseRed}
-            />
-
-            <BgmCard
-              label="🎉 中奖音乐"
-              description="中奖者揭晓时播放的庆祝音乐"
-              bgm={winnerBgm}
-              volume={winnerVolume}
-              onSelect={() => handleSelectAudio(setWinnerBgm)}
-              onRemove={() => setWinnerBgm(null)}
-              onVolumeChange={setWinnerVolume}
-              isDark={isDark}
-              isChineseRed={isChineseRed}
-            />
-          </div>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <BgmCard
+            track="idle"
+            icon="music"
+            label="待机音乐"
+            description="进入抽奖页、等待开始时播放"
+            bgm={idleBgm}
+            volume={idleVolume}
+            loop={idleLoop}
+            onSelect={() => handleSelectAudio(setIdleBgm)}
+            onRemove={() => setIdleBgm(null)}
+            onVolumeChange={setIdleVolume}
+            onLoopChange={v => setLoop('idle', v)}
+          />
+          <BgmCard
+            track="rolling"
+            icon="sparkles"
+            label="抽奖音乐"
+            description="点击「开始」后，滚动抽取过程中播放"
+            bgm={rollingBgm}
+            volume={rollingVolume}
+            loop={rollingLoop}
+            onSelect={() => handleSelectAudio(setRollingBgm)}
+            onRemove={() => setRollingBgm(null)}
+            onVolumeChange={setRollingVolume}
+            onLoopChange={v => setLoop('rolling', v)}
+          />
+          <BgmCard
+            track="winner"
+            icon="trophy"
+            label="中奖音乐"
+            description="中奖名单揭晓时播放的庆祝音乐"
+            bgm={winnerBgm}
+            volume={winnerVolume}
+            loop={winnerLoop}
+            onSelect={() => handleSelectAudio(setWinnerBgm)}
+            onRemove={() => setWinnerBgm(null)}
+            onVolumeChange={setWinnerVolume}
+            onLoopChange={v => setLoop('winner', v)}
+          />
         </div>
       )}
 
-      {/* 使用提示 */}
-      <div className={`rounded-xl p-5 relative z-10 ${
-        isChineseRed
-          ? 'bg-red-950/50 border border-yellow-500/10'
-          : isDark ? 'bg-white/5' : 'bg-blue-50'
-      }`}>
-        <h4 className={`font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-          💡 使用提示
-        </h4>
-        <ul className={`text-sm space-y-1.5 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-          <li>• 待机音乐：进入抽奖页面后自动循环播放</li>
-          <li>• 抽奖音乐：点击「开始」后替换待机音乐，营造紧张氛围</li>
-          <li>• 中奖音乐：中奖名单揭晓时播放，建议选择欢快的音效</li>
-          <li>• 每种音乐都可以独立设置音量，也可以只设置部分</li>
-          <li>• 支持格式：MP3、WAV、OGG、AAC、M4A、FLAC</li>
+      <div className="ui-card p-5 text-sm ui-muted">
+        <div className="flex items-center gap-2 font-medium mb-2" style={{ color: 'var(--text)' }}>
+          <Icon name="info" size={16} /> 使用提示
+        </div>
+        <ul className="space-y-1.5 list-disc pl-5">
+          <li>「循环」打开：该阶段持续多久就循环多久；关闭：播放一遍后安静，下次进入该阶段再从头播放。</li>
+          <li>抽奖页右上角的喇叭按钮可随时一键静音。</li>
+          <li>试听时可以直接拖动音量，再点一次方块按钮即可停止。</li>
+          <li>支持 MP3、WAV、OGG、AAC、M4A、FLAC。</li>
         </ul>
       </div>
     </div>
