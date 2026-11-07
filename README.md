@@ -63,7 +63,7 @@
 
 | 操作系统与芯片架构 | 推荐安装包文件名 | 说明 |
 |---|---|---|
-| **Windows 10 / 11 (x64)** | `年会抽奖-2.2.0-Setup.exe` | 标准 NSIS 安装程序 |
+| **Windows 10 / 11 (x64)** | `Annual-Lucky-Draw-2.2.0-Setup.exe` | 标准 NSIS 安装程序 |
 | **macOS Apple Silicon (M1–M4)** | `Annual-Lucky-Draw-2.2.0-arm64.dmg` (或 `.zip`) | 适用于 Apple 芯片 Mac（需在 Mac 上构建，见下方说明） |
 | **macOS Intel (x64)** | `Annual-Lucky-Draw-2.2.0-x64.dmg` (或 `.zip`) | 适用于 Intel 芯片 Mac（同上） |
 

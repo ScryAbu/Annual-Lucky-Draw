@@ -20,7 +20,7 @@
         ]
       }
     ],
-    "artifactName": "${productName}-${version}-Setup.${ext}"
+    "artifactName": "Annual-Lucky-Draw-${version}-Setup.${ext}"
   },
   "nsis": {
     "oneClick": false,
