@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useEmployeeStore } from '../../stores/employeeStore'
+import { usePrizeStore } from '../../stores/prizeStore'
 import { useThemeStore } from '../../stores/themeStore'
 import { parseExcelFile, getExcelHeaders, autoDetectFieldMapping, convertToEmployees } from '../../utils/excelParser'
 import { FieldMapping, DEFAULT_FIELD_MAPPING, Employee } from '../../types'
@@ -20,6 +21,7 @@ interface ImportStats {
 
 export default function DataImport() {
   const { employees, setEmployees, addEmployee, updateEmployee, clearAll } = useEmployeeStore()
+  const prizes = usePrizeStore(s => s.prizes)
   const { theme } = useThemeStore()
   
   const [excelFile, setExcelFile] = useState<string | null>(null)
@@ -86,7 +88,7 @@ export default function DataImport() {
       '权重': emp.weight ?? 1,
       '积分': typeof emp.points === 'number' ? emp.points : 0,
       '是否中奖': emp.isWinner ? '是' : '否',
-      '中奖奖项ID': emp.prizeId || '',
+      '中奖奖项': emp.prizeId ? (prizes.find(p => p.id === emp.prizeId)?.name ?? emp.prizeId) : '',
     }))
     
     const worksheet = XLSX.utils.json_to_sheet(exportData)
@@ -104,7 +106,7 @@ export default function DataImport() {
     a.download = `员工名单_${new Date().toISOString().slice(0,10)}.xlsx`
     a.click()
     URL.revokeObjectURL(url)
-  }, [employees])
+  }, [employees, prizes])
 
   // 选择 Excel 文件
   const handleSelectExcel = useCallback(async () => {

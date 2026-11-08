@@ -20,7 +20,7 @@ try {
     webSecurity: BrowserWindow.getAllWindows()[0].webContents.getLastWebPreferences().webSecurity,
   }))
   assert.equal(info.packaged, true)
-  assert.equal(info.version, '2.2.0')
+  assert.equal(info.version, '2.2.1')
   assert.equal(info.userData.toLowerCase(), profile.toLowerCase())
   assert.equal(info.visible, false)
   assert.equal(info.webSecurity, true)

@@ -11,6 +11,8 @@
 - 抽奖中冻结人员池与规则；人员和奖项结果必须在同一个 IndexedDB 事务中保存。
 - 照片解码完成前保留文字卡片；纹理在所属卡片卸载时释放，异步回调不得更新已卸载卡片。
 - `npm run typecheck`、`npm test`、`npm run build:web` 是代码验证入口；桌面打包为 `npm run dist:win` / `npm run dist:mac`。
+- 完整用户流程验收（打包版，文件对话框替换为测试素材）：tests/user-journey.mjs，需 TEST_PROFILE、FIXTURES、LOTTERY_EXE。
+- 发版：CI（.github/workflows/build.yml，windows-latest + macos-15）在推送后产出两端安装包，用 `gh run download` 取 macOS 产物上传 Release；`gh` 访问 API 需走代理 127.0.0.1:7897；Release 附件名必须是英文（GitHub 会删掉中文字符）。
 - 浏览器回归见 tests/browser-smoke.mjs，TEST_PROFILE 必须是登记过的隔离目录，不得使用个人浏览器配置。
 - macOS 安装包在 macOS 构建；CI 产物未经签名/公证，不等同于已经过实机安装验收。
 - 构建产物在 release/，不提交安装包、个人名单、照片、活动配置或本地浏览器资料。

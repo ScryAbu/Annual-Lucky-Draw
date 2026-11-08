@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { usePrizeStore } from '../stores/prizeStore'
@@ -36,6 +36,11 @@ export default function UltimatePrizePage() {
   const isChineseRed = theme.type === 'chinese-red'
 
   const availablePrizes = getAvailablePrizes()
+  // 默认选中第一个还有名额的奖项，避免现场按空格没有反应
+  useEffect(() => {
+    if (status !== 'idle') return
+    if (!availablePrizes.some(p => p.id === selectedPrizeId)) setSelectedPrizeId(availablePrizes[0]?.id ?? '')
+  }, [availablePrizes, selectedPrizeId, status])
   const eligiblePool = getEligiblePool()
   const totalWeight = getTotalWeight()
 
