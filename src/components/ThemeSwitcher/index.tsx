@@ -550,7 +550,7 @@ export default function ThemeSwitcher() {
 
               <div className={`p-3.5 rounded-xl ${'bg-[var(--surface-2)]'}`}>
                 <div className="flex items-center justify-between">
-                  <span className={`text-sm font-medium ${'text-[var(--text)]'}`}>
+                  <span className={`text-sm font-medium whitespace-nowrap ${'text-[var(--text)]'}`}>
                     3D 球体与名片尺寸：{Math.round(sphereScale * 100)}%
                   </span>
                   <div className="flex gap-1">
@@ -558,9 +558,9 @@ export default function ThemeSwitcher() {
                       <button
                         key={label}
                         onClick={() => setSphereScale(val)}
-                        className={`px-2 py-0.5 rounded text-[11px] ${
+                        className={`px-2 py-0.5 rounded text-[11px] whitespace-nowrap ${
                           Math.abs(sphereScale - val) < 0.05
-                            ? 'bg-indigo-500 text-white'
+                            ? 'bg-[var(--accent)] text-[var(--accent-ink)]'
                             : isDark ? 'bg-white/10 text-gray-300' : 'bg-gray-100 text-gray-600'
                         }`}
                       >

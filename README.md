@@ -63,11 +63,11 @@
 
 | 操作系统与芯片架构 | 推荐安装包文件名 | 说明 |
 |---|---|---|
-| **Windows 10 / 11 (x64)** | `Annual-Lucky-Draw-2.2.0-Setup.exe` | 标准 NSIS 安装程序 |
-| **macOS Apple Silicon (M1–M4)** | `Annual-Lucky-Draw-2.2.0-arm64.dmg` (或 `.zip`) | 适用于 Apple 芯片 Mac（需在 Mac 上构建，见下方说明） |
-| **macOS Intel (x64)** | `Annual-Lucky-Draw-2.2.0-x64.dmg` (或 `.zip`) | 适用于 Intel 芯片 Mac（同上） |
+| **Windows 10 / 11 (x64)** | `Annual-Lucky-Draw-2.2.1-Setup.exe` | 标准 NSIS 安装程序 |
+| **macOS Apple Silicon (M1–M4)** | `Annual-Lucky-Draw-2.2.1-arm64.dmg` (或 `.zip`) | 适用于 Apple 芯片 Mac |
+| **macOS Intel (x64)** | `Annual-Lucky-Draw-2.2.1-x64.dmg` (或 `.zip`) | 适用于 Intel 芯片 Mac |
 
-> v2.2.0 的 Release 页面先提供 Windows 安装包；macOS 包需在 Mac 上执行 `npm run dist:mac` 构建后补充上传。
+> macOS 安装包由 GitHub Actions 的 macOS 机器自动构建，未经 Apple 签名与公证。
 
 > **系统安全提示说明**：当前提供的安装包未经商业代码签名与 Apple 公证（Notarization）。
 > - **Windows** 首次运行若弹出 SmartScreen 提示，请点击“更多信息” → “仍要运行”。
